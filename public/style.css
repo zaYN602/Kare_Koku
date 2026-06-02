@@ -1,0 +1,1672 @@
+:root {
+    --bg: #0a0a0a;
+    --card: #111111;
+    --gold: #cca76a;
+    --orange: #ff6b35;
+    --border: #222222;
+    --text: #f5f5dc;
+    --muted: #888888;
+    --main-font: 'Montserrat', sans-serif;
+    --active-theme: var(--gold);
+}
+
+body.light-theme {
+    --bg: #F7F7F7;
+    --card: #FFFFFF;
+    --active-theme: #9A7B4F;
+    --gold: #9A7B4F;
+    --border: #DEDEDE;
+    --text: #1A1A1A;
+    --muted: #666666;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* D3: Birleştirilmiş body arka plan kuralı */
+body {
+    font-family: var(--main-font);
+    background: radial-gradient(circle at 15% 50%, rgba(204, 167, 106, 0.08), transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.05), transparent 50%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    overflow-x: hidden;
+}
+
+body.light-theme {
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--active-theme);
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+/* HEADER */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.header-left:hover {
+    transform: scale(1.03);
+}
+
+.site-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    object-fit: contain;
+    filter: invert(1) hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 5px rgba(204, 167, 106, 0.8));
+}
+
+/* D4: Light tema logo düzeltmesi */
+body.light-theme .site-logo {
+    mix-blend-mode: multiply;
+    filter: drop-shadow(0 0 10px rgba(154, 123, 79, 0.4));
+}
+
+.logo-text {
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--active-theme);
+    letter-spacing: 4px;
+    transition: 0.3s;
+    text-shadow: 0 0 20px rgba(204, 167, 106, 0.5);
+}
+
+.header-center {
+    flex: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.header-nav { display: flex; gap: 30px; align-items: center; justify-content: center; width: 100%; margin-top: 5px; white-space: nowrap; }
+
+.search-bar {
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-bar span {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 15px 12px 40px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--main-font);
+    font-size: 13px;
+    border-radius: 30px;
+    outline: none;
+    transition: 0.3s;
+}
+
+.search-bar input:focus {
+    border-color: var(--active-theme);
+}
+
+.suggestions-box {
+    position: absolute;
+    top: 110%;
+    left: 0;
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--active-theme);
+    z-index: 200;
+    display: none;
+    max-height: 250px;
+    overflow-y: auto;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+}
+
+.suggestion-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 12px;
+    color: var(--text);
+    transition: 0.2s;
+}
+
+.suggestion-item img {
+    width: 35px;
+    height: 35px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.suggestion-item:hover {
+    background: rgba(204, 167, 106, 0.1);
+    color: var(--active-theme);
+}
+
+.filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 24px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 30px;
+    transition: 0.3s;
+}
+
+.filter-btn:hover {
+    border-color: var(--active-theme);
+    color: var(--active-theme);
+}
+
+.header-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 15px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.header-right span {
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+}
+
+.header-right span:hover {
+    color: var(--active-theme);
+}
+
+.cart-badge {
+    background: var(--active-theme);
+    color: #000;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    transition: 0.3s;
+}
+
+.theme-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    transition: 0.3s;
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--active-theme);
+    color: var(--active-theme);
+}
+
+/* VİTRİN */
+#anaSayfaView {
+    display: block;
+}
+
+#hesabimView {
+    display: none;
+}
+
+.hero {
+    background: var(--bg);
+    padding: 80px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-title {
+    font-size: clamp(50px, 8vw, 100px);
+    font-weight: 900;
+    line-height: 1.1;
+    text-align: center;
+    letter-spacing: -2px;
+}
+
+.filled-text {
+    color: var(--text);
+}
+
+.outlined-text {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--active-theme);
+    transition: 0.3s;
+}
+
+.hero-subtitle {
+    color: var(--muted);
+    margin-top: 25px;
+    font-size: 15px;
+    font-weight: 400;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+.features-bar {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    border-top: 1px solid var(--border);
+    padding-top: 40px;
+}
+
+.feature-item {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: 0.3s;
+}
+
+.feature-item:hover {
+    transform: translateY(-5px);
+}
+
+.feature-icon {
+    font-size: 32px;
+    color: var(--active-theme);
+}
+
+.feature-item strong {
+    color: var(--text);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.main-tabs {
+    display: flex;
+    gap: 40px;
+    margin-top: 50px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    position: relative;
+    transition: 0.3s;
+    text-transform: uppercase;
+    font-family: var(--main-font);
+}
+
+.tab-btn.active {
+    color: var(--active-theme);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -16px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--active-theme);
+    transition: 0.3s;
+}
+
+.main-pills {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pill-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 30px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    font-family: var(--main-font);
+}
+
+.pill-btn.active {
+    border-color: var(--active-theme);
+    color: var(--active-theme);
+}
+
+.container {
+    max-width: 1300px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 25px;
+}
+
+/* D1: Birleştirilmiş .card kuralı (tek tanım) */
+.card {
+    --c-theme: var(--gold);
+    background: rgba(25, 25, 25, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 12px;
+    transition: transform 0.4s, border-color 0.4s, box-shadow 0.4s;
+    display: flex;
+    flex-direction: column;
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.card.designer {
+    --c-theme: var(--orange);
+}
+
+.card.nis {
+    --c-theme: var(--gold);
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    border-color: var(--c-theme);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(204, 167, 106, 0.05);
+}
+
+body.light-theme .card {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .card:hover {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* D2: Birleştirilmiş .card img kuralı (tek tanım) */
+.card img {
+    width: 100%;
+    height: 280px;
+    object-fit: contain;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: #ffffff;
+    border: none;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+.brand {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+}
+
+.badge-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.badge {
+    background: transparent;
+    color: var(--c-theme);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    border: 1px solid var(--c-theme);
+}
+
+.notes {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--c-theme);
+    margin-bottom: 15px;
+    min-height: 35px;
+    line-height: 1.5;
+}
+
+.vol-select {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    margin-bottom: 15px;
+    outline: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: var(--main-font);
+    font-weight: 600;
+}
+
+.card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.price {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.add-btn {
+    background: transparent;
+    border: 1px solid var(--c-theme);
+    color: var(--c-theme);
+    padding: 10px 18px;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.3s;
+    text-transform: uppercase;
+    border-radius: 4px;
+}
+
+.add-btn:hover {
+    background: var(--c-theme);
+    color: #fff;
+}
+
+/* HESABIM SAYFASI */
+.account-container {
+    display: flex;
+    max-width: 1200px;
+    margin: 40px auto;
+    gap: 30px;
+    padding: 0 20px;
+}
+
+.account-sidebar {
+    width: 250px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 0;
+    height: fit-content;
+}
+
+.account-menu-item {
+    padding: 15px 20px;
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: 0.3s;
+}
+
+.account-menu-item:hover,
+.account-menu-item.active {
+    background: rgba(204, 167, 106, 0.1);
+    border-left-color: var(--active-theme);
+    color: var(--active-theme);
+}
+
+.account-content {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 30px;
+    min-height: 500px;
+}
+
+.settings-group {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--border);
+}
+
+.action-box {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.action-box:hover {
+    border-color: var(--active-theme);
+    background: rgba(204, 167, 106, 0.05);
+}
+
+/* ÇEKMECELER & MODALLAR */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 900;
+    display: none;
+    backdrop-filter: blur(3px);
+}
+
+.login-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    z-index: 2005;
+    padding: 30px;
+    overflow-y: auto;
+    transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer.open {
+    right: 0;
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.drawer-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--active-theme);
+}
+
+.filter-title {
+    font-size: 14px;
+    font-weight: 800;
+    margin: 25px 0 10px 0;
+    color: var(--text);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.scrollable-filter {
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.custom-cb {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: 0.2s;
+}
+
+.custom-cb:hover {
+    color: var(--text);
+}
+
+.custom-cb input {
+    accent-color: var(--active-theme);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.cart-item {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+}
+
+.cart-item img {
+    width: 70px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #fff;
+}
+
+.cart-total {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--text);
+    text-align: right;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+
+/* D5: checkout-button hover tema uyumu */
+.checkout-button {
+    width: 100%;
+    padding: 18px;
+    background: var(--active-theme);
+    color: #000;
+    border: none;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.3s;
+}
+
+.checkout-button:hover {
+    background: #fff;
+    color: #000;
+}
+
+body.light-theme .checkout-button:hover {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+.login-modal {
+    background: var(--card);
+    border: 1px solid var(--active-theme);
+    padding: 40px;
+    width: 400px;
+    position: relative;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    z-index: 2010;
+}
+
+.login-input {
+    width: 100%;
+    padding: 15px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    margin-bottom: 15px;
+    font-size: 14px;
+    outline: none;
+    border-radius: 6px;
+    font-family: var(--main-font);
+    transition: 0.3s;
+}
+
+.login-input:focus {
+    border-color: var(--active-theme);
+}
+
+.login-submit {
+    width: 100%;
+    padding: 15px;
+    background: var(--active-theme);
+    color: #000;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    font-family: var(--main-font);
+    transition: 0.3s;
+}
+
+.login-submit:hover {
+    background: #fff;
+}
+
+.info-modal {
+    background: var(--card);
+    border: 1px solid var(--active-theme);
+    padding: 40px;
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+
+.info-modal h2 {
+    color: var(--active-theme);
+    margin-bottom: 25px;
+    font-size: 24px;
+    text-align: center;
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 15px;
+}
+
+.info-modal-content {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.info-modal-content h3 {
+    color: var(--active-theme);
+    margin: 25px 0 10px;
+    font-size: 18px;
+}
+
+.info-modal-content ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.info-modal-content li {
+    margin-bottom: 8px;
+}
+
+.info-modal-content p {
+    margin-bottom: 15px;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translate(-50%, 100px);
+    background: var(--card);
+    border: 1px solid var(--active-theme);
+    color: var(--active-theme);
+    padding: 15px 30px;
+    transition: 0.4s;
+    z-index: 3000;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 30px;
+}
+
+.toast.show {
+    transform: translate(-50%, 0);
+}
+
+/* D6: Toast error class */
+.toast.error {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* FOOTER */
+.footer {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 60px 40px 30px;
+    margin-top: 60px;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+
+.footer-col h4 {
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 25px;
+}
+
+.footer-col ul {
+    list-style: none;
+}
+
+.footer-col ul li {
+    margin-bottom: 15px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    transition: 0.3s;
+}
+
+.footer-col ul li:hover {
+    color: var(--active-theme);
+}
+
+.footer-contact {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.footer-contact i {
+    font-size: 20px;
+    color: var(--active-theme);
+}
+
+.footer-bottom {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+/* Animasyonlar */
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* D9: Skeleton pulse animasyonu */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* ÜRÜN DETAY SAYFASI (PDP) */
+.pdp-accordion details {
+    border-top: 1px solid var(--border);
+    padding: 15px 0;
+}
+
+.pdp-accordion details:last-child {
+    border-bottom: 1px solid var(--border);
+}
+
+.pdp-accordion summary {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pdp-accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.pdp-accordion summary::after {
+    content: '+';
+    font-size: 20px;
+    color: var(--muted);
+    transition: 0.3s;
+}
+
+.pdp-accordion details[open] summary::after {
+    content: '−';
+    color: var(--active-theme);
+}
+
+.pdp-accordion p {
+    margin-top: 15px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+/* Yorum Kartları */
+.rating-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.star-label {
+    color: var(--text);
+    font-weight: 600;
+    width: 30px;
+}
+
+.bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.bar-fill {
+    height: 100%;
+    background: var(--active-theme);
+}
+
+.count-label {
+    color: var(--muted);
+    width: 20px;
+    text-align: right;
+}
+
+.review-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* Sticky Alt Bar */
+.sticky-footer {
+    position: fixed;
+    bottom: -100px;
+    left: 0;
+    width: 100%;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1500;
+    transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.sticky-footer.visible {
+    bottom: 0;
+}
+
+/* Ana Layout (Sidebar + İçerik) — TEK TANIM */
+.shop-layout {
+    display: flex;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 30px auto;
+    padding: 0 20px;
+    align-items: flex-start;
+}
+
+/* D7: Sol Kalıcı Sidebar — max-height kullanıldı */
+.shop-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.shop-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.shop-sidebar::-webkit-scrollbar-thumb {
+    background: var(--active-theme);
+    border-radius: 4px;
+}
+
+/* Daraltılmış Sleek Hero Banner — TEK TANIM */
+.hero-slim {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.6), rgba(10, 10, 10, 0.8));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(204, 167, 106, 0.2);
+    border-radius: 12px;
+    padding: 30px 40px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* D8: Hero slim light theme */
+body.light-theme .hero-slim {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(245, 245, 245, 0.95));
+    border-color: rgba(154, 123, 79, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.hero-slim h1 {
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+    color: var(--text);
+}
+
+.hero-slim p {
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 400px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.hero-slim .highlight {
+    color: var(--active-theme);
+}
+
+.shop-main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Sidebar Akordeon Filtreler — TEK TANIM */
+.sidebar-filter-group {
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.sidebar-filter-group details summary {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-filter-group details summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-filter-group details summary::after {
+    content: '+';
+    color: var(--active-theme);
+    font-size: 18px;
+    font-weight: 400;
+    transition: 0.3s;
+}
+
+.sidebar-filter-group details[open] summary::after {
+    content: '−';
+}
+
+.sidebar-filter-group .filter-content {
+    margin-top: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-filter-group .filter-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-filter-group .filter-content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+
+
+/* 2. Ana Düzen (Layout) */
+.shop-layout {
+    display: flex;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 30px auto;
+    padding: 0 20px;
+    align-items: flex-start;
+}
+
+/* 3. Kalıcı Sidebar (Sol Menü) */
+.shop-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+.shop-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.shop-sidebar::-webkit-scrollbar-thumb {
+    background: var(--active-theme);
+    border-radius: 4px;
+}
+
+/* 4. Açılır/Kapanır Accordion Filtreler */
+.sidebar-filter-group {
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.sidebar-filter-group details summary {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-filter-group details summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-filter-group details summary::after {
+    content: '+';
+    color: var(--active-theme);
+    font-size: 18px;
+    font-weight: 400;
+    transition: 0.3s;
+}
+
+.sidebar-filter-group details[open] summary::after {
+    content: '−';
+}
+
+.sidebar-filter-group .filter-content {
+    margin-top: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-filter-group .filter-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-filter-group .filter-content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+/* 5. Ana İçerik ve Slim Hero */
+.shop-main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* TEMA UYUMLU HERO BANNER */
+.hero-slim {
+    background: var(--hero-bg, linear-gradient(135deg, rgba(20, 20, 20, 0.6), rgba(10, 10, 10, 0.8)));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--hero-border, rgba(204, 167, 106, 0.2));
+    border-radius: 12px;
+    padding: 30px 40px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--hero-shadow, 0 10px 30px rgba(0, 0, 0, 0.5));
+}
+
+body.light-theme .hero-slim {
+    --hero-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(245, 245, 245, 0.95));
+    --hero-border: rgba(154, 123, 79, 0.3);
+    --hero-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-filter-btn {
+    display: none;
+    width: 100%;
+    padding: 15px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.mobile-filter-btn:hover {
+    border-color: var(--active-theme);
+    color: var(--active-theme);
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1999;
+    display: none;
+    opacity: 0;
+    transition: 0.4s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+@media (max-width: 900px) {
+    .shop-layout {
+        flex-direction: column;
+    }
+
+    .shop-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 300px;
+        max-width: 80vw;
+        height: 100vh;
+        z-index: 2000;
+        border-radius: 0;
+        transition: left 0.4s ease;
+        padding: 30px 20px;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        background: var(--bg);
+        overflow-y: auto;
+    }
+
+    .shop-sidebar.open {
+        left: 0;
+    }
+
+    .hero-slim {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+
+    .mobile-filter-btn {
+        display: block;
+    }
+
+    .mobile-close-btn {
+        display: block !important;
+    }
+}
+
+/* --- L�KS ARAMA �UBUU (PREMIUM SEARCH) --- */
+.search-bar.premium-search {
+    width: 100%;
+    max-width: 600px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+body.dark-theme .search-bar.premium-search {
+    background: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+.search-bar.premium-search:focus-within {
+    border-color: var(--active-theme);
+    box-shadow: 0 0 0 3px rgba(201, 169, 104, 0.15);
+}
+
+.search-bar.premium-search .search-icon {
+    position: static;
+    transform: none;
+    margin-left: 20px;
+    margin-right: 5px;
+    opacity: 0.9;
+}
+
+.search-bar.premium-search input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 16px 20px 16px 10px;
+    font-size: 15px;
+    border-radius: 0;
+    color: var(--text);
+    outline: none;
+    box-shadow: none;
+}
+
+.search-bar.premium-search input:focus {
+    border: none;
+    box-shadow: none;
+}
+
+/* =========================================
+   MOBİL UYUMLULUK (RESPONSIVE DESIGN)
+   ========================================= */
+@media (max-width: 768px) {
+
+    /* Header */
+    .header {
+        flex-direction: column;
+        padding: 15px 20px;
+        gap: 15px;
+    }
+
+    .header-left {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .site-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .theme-toggle-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    /* Hero Banner */
+    .hero-slim {
+        padding: 20px 20px;
+        border-radius: 8px;
+    }
+
+    .hero-slim h1 {
+        font-size: 22px;
+    }
+
+    .hero-slim p {
+        font-size: 12px;
+    }
+
+    /* Trust Badges Wrap */
+    .hero-slim>div:last-child>div:first-child {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    /* Modallar & Çekmeceler */
+    .login-modal,
+    .info-modal {
+        width: 90vw !important;
+        padding: 25px 20px;
+    }
+
+    .drawer {
+        width: 85vw;
+        right: -85vw;
+    }
+
+    /* Hesabım Sayfası */
+    .account-container {
+        flex-direction: column;
+    }
+
+    .account-sidebar {
+        width: 100%;
+    }
+
+    .account-content {
+        min-height: 300px;
+    }
+
+    /* Footer */
+    .footer {
+        padding: 40px 20px 20px;
+    }
+
+    .footer-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .footer-contact {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Daha küçük telefonlar için ekstra düzeltmeler */
+    .header-right {
+        gap: 10px;
+        font-size: 11px;
+    }
+
+    .search-bar.premium-search input {
+        padding: 12px 15px 12px 10px;
+        font-size: 13px;
+    }
+
+    .checkout-button {
+        padding: 14px 15px;
+        font-size: 12px;
+    }
+}
+
+/* Header Navigation */
+.header-nav {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.header-nav span {
+    cursor: pointer;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    transition: 0.3s;
+    position: relative;
+}
+
+.header-nav span:hover {
+    color: var(--active-theme);
+}
+
+.header-nav span::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -5px;
+    left: 0;
+    background-color: var(--active-theme);
+    transition: 0.3s;
+}
+
+.header-nav span:hover::after {
+    width: 100%;
+}
+
+/* Mobile gizleme */
+@media (max-width: 900px) {
+    .header-nav {
+        display: none !important;
+    }
+}
+
+/* 2-Column Mobile Product Grid */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15px;
+    }
+    .card {
+        padding: 15px;
+    }
+    .card img {
+        height: 180px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .title {
+        font-size: 16px;
+    }
+    .price {
+        font-size: 16px;
+    }
+    .add-btn {
+        padding: 8px 12px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid {
+        gap: 10px;
+    }
+    .card {
+        padding: 10px;
+    }
+    .card img {
+        height: 140px;
+        padding: 5px;
+    }
+    .title {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    .price {
+        font-size: 14px;
+    }
+    .brand {
+        font-size: 9px;
+    }
+    .notes {
+        font-size: 10px;
+        min-height: 25px;
+        margin-bottom: 10px;
+    }
+    .vol-select {
+        padding: 8px;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+}

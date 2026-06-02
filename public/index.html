@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KARE KOKU | Premium Dekant Parfüm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2.6">
+
+</head>
+
+<body>
+
+    <!-- SİDEBAR OVERLAY (MOBİL İÇİN) -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+    <header class="header">
+        <div class="header-left" onclick="showView('anaSayfaView')">
+            <img src="KareKokuLogo.png" alt="Logo" class="site-logo">
+            <span class="logo-text">KARE<span class="filled-text">KOKU</span></span>
+        </div>
+
+        <div class="header-center">
+            <nav class="header-nav">
+                <span onclick="hizliKategoriSec('nis')">NİŞ PARFÜM</span>
+                <span onclick="hizliKategoriSec('designer')">DESIGNER</span>
+                <span onclick="hizliKategoriSec('erkek')">ERKEK</span>
+                <span onclick="hizliKategoriSec('kadin')">KADIN</span>
+                <span onclick="hizliKategoriSec('unisex')">UNISEX</span>
+            </nav>
+        </div>
+
+        <div class="header-right">
+            <button class="theme-toggle-btn" onclick="temaDegistir()">🌓 Tema Değiştir</button>
+            <span id="authBtn" onclick="handleAuthClick()">👤 Giriş Yap / Üye Ol</span>
+            <span onclick="toggleDrawer('cartDrawer')">🛍️ Sepet (<b id="sepetSayaci" class="cart-badge">0</b>)</span>
+        </div>
+    </header>
+
+    <!-- 🌟 YENİ ANA SAYFA (LÜKS VİTRİN VE SİDEBAR) 🌟 -->
+    <div id="anaSayfaView">
+        <div class="shop-layout">
+
+            <!-- SOL KALICI SİDEBAR -->
+            <aside class="shop-sidebar">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">
+                    <h3 style="font-size: 16px; color: var(--active-theme); margin: 0;">FİLTRELER</h3>
+                    <button class="mobile-close-btn" onclick="toggleMobileSidebar()"
+                        style="background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; display: none;">✕</button>
+                </div>
+
+                <div class="sidebar-filter-group">
+                    <details open>
+                        <summary>Kategori</summary>
+                        <div id="kategoriFiltreleri" class="filter-content">
+                            <label class="custom-cb"><input type="checkbox" value="nis" onchange="filtreleriUygula()">
+                                Niş Parfüm</label>
+                            <label class="custom-cb"><input type="checkbox" value="designer"
+                                    onchange="filtreleriUygula()"> Designer Parfüm</label>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="sidebar-filter-group">
+                    <details open>
+                        <summary>Cinsiyet</summary>
+                        <div id="cinsiyetFiltreleri" class="filter-content">
+                            <label class="custom-cb"><input type="checkbox" value="erkek" onchange="filtreleriUygula()">
+                                Erkek</label>
+                            <label class="custom-cb"><input type="checkbox" value="kadin" onchange="filtreleriUygula()">
+                                Kadın</label>
+                            <label class="custom-cb"><input type="checkbox" value="unisex"
+                                    onchange="filtreleriUygula()"> Unisex</label>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="sidebar-filter-group">
+                    <details open>
+                        <summary>Koku Ailesi</summary>
+                        <div id="kokuFiltreleri" class="filter-content">
+                            <label class="custom-cb"><input type="checkbox" value="odunsu"
+                                    onchange="filtreleriUygula()"> Odunsu</label>
+                            <label class="custom-cb"><input type="checkbox" value="meyvemsi"
+                                    onchange="filtreleriUygula()"> Meyvemsi</label>
+                            <label class="custom-cb"><input type="checkbox" value="ciceksi"
+                                    onchange="filtreleriUygula()"> Çiçeksi</label>
+                            <label class="custom-cb"><input type="checkbox" value="baharatli"
+                                    onchange="filtreleriUygula()"> Baharatlı</label>
+                            <label class="custom-cb"><input type="checkbox" value="ferah" onchange="filtreleriUygula()">
+                                Ferah / Sucul</label>
+                            <label class="custom-cb"><input type="checkbox" value="gurme" onchange="filtreleriUygula()">
+                                Gurme</label>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="sidebar-filter-group">
+                    <details>
+                        <summary>Markalar</summary>
+                        <div id="markaFiltreleri" class="filter-content">
+                            <!-- JS ile otomatik dolacak -->
+                        </div>
+                    </details>
+                </div>
+            </aside>
+
+            <!-- SAĞ ANA İÇERİK (VİTRİN) -->
+            <main class="shop-main">
+
+                <!-- MOBİL FİLTRE BUTONU -->
+                <button class="mobile-filter-btn" onclick="toggleMobileSidebar()">⚙️ FİLTRELERİ AÇ / DÜZENLE</button>
+
+                <!-- Daraltılmış Lüks Banner -->
+                <div class="hero-slim">
+                    <div style="flex: 1;">
+                        <h1
+                            style="color:var(--text); font-size:28px; margin-bottom:5px; font-weight:900; letter-spacing: 1px;">
+                            NOTALARDA <span style="color:var(--active-theme);">LÜKS</span></h1>
+                        <p style="color:var(--muted); font-size:13px; max-width:450px; margin:0; line-height: 1.5;">Niş
+                            ve tasarımcı parfüm dünyasının en seçkin eserleri. Orijinal deneyim ile şimdi sizin için
+                            bölündü.</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <div style="text-align: center; color: var(--muted); font-size: 11px;"><span
+                                    style="display:block; font-size: 20px; margin-bottom: 5px;">💎</span>%100 Orijinal
+                            </div>
+                            <div style="width: 1px; height: 30px; background: var(--border);"></div>
+                            <div style="text-align: center; color: var(--muted); font-size: 11px;"><span
+                                    style="display:block; font-size: 20px; margin-bottom: 5px;">🔒</span>Güvenli
+                                Alışveriş</div>
+                            <div style="width: 1px; height: 30px; background: var(--border);"></div>
+                            <div style="text-align: center; color: var(--muted); font-size: 11px;"><span
+                                    style="display:block; font-size: 20px; margin-bottom: 5px;">🚚</span>Ücretsiz Kargo
+                            </div>
+                        </div>
+                        <button class="checkout-button"
+                            style="padding: 10px 0; border-radius: 6px; font-size: 13px; font-weight: 600; width: 100%; box-shadow: 0 4px 15px rgba(201, 169, 104, 0.2); letter-spacing: 1px;"
+                            onclick="openQuiz()">✨ İMZA KOKUNU BUL</button>
+                    </div>
+                </div>
+
+                <!-- Lüks Arama Çubuğu (Mağaza İçi) -->
+                <div
+                    style="margin-bottom: 40px; display: flex; justify-content: center; position: relative; z-index: 50;">
+                    <div class="search-bar premium-search" style="width: 100%; max-width: 600px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--active-theme)"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="İmza kokunuzu, marka veya notaları arayın..."
+                            onkeyup="aramaOnerileriGetir()" autocomplete="off">
+                        <div id="searchSuggestions" class="suggestions-box"></div>
+                    </div>
+                </div>
+
+                <!-- Kartlar bu Grid içine dolacak -->
+                <div class="grid" id="urunGrid"></div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- HESABIM SAYFASI -->
+    <div id="hesabimView" style="display: none;">
+        <div class="account-container">
+            <div class="account-sidebar">
+                <div
+                    style="text-align: center; padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">👤</div>
+                    <h3 style="color: var(--active-theme);" id="accNameDisplay">Kullanıcı Adı</h3>
+                </div>
+
+                <div class="account-menu-item active" onclick="hesapTabGoster('siparisler', event)">📦 Geçmiş
+                    Siparişlerim</div>
+                <div class="account-menu-item" onclick="hesapTabGoster('adreslerim', event)">📍 Teslimat Adresleri</div>
+                <div class="account-menu-item" onclick="hesapTabGoster('kartlarim', event)">💳 Ödeme Yöntemleri</div>
+                <div class="account-menu-item" onclick="hesapTabGoster('guvenlik', event)">🔒 Şifre Değiştir</div>
+                <div class="account-menu-item"
+                    style="color: #ef4444; border-top: 1px solid var(--border); margin-top: 15px;" onclick="cikisYap()">
+                    🚪 Güvenli Çıkış</div>
+                <div class="account-menu-item"
+                    style="color: #ef4444; margin-top: 5px; background: rgba(239, 68, 68, 0.05);" onclick="hesabiSil()">
+                    🗑️ Hesabı Kalıcı Olarak Sil</div>
+            </div>
+
+            <div class="account-content">
+                <div id="tab-siparisler">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                        <h2 style="color: var(--active-theme); margin: 0;">Sipariş Geçmişim</h2>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border); color: var(--muted);">
+                                    <th style="padding: 15px 10px;">NO</th>
+                                    <th style="padding: 15px 10px;">TARİH</th>
+                                    <th style="padding: 15px 10px;">İÇERİK</th>
+                                    <th style="padding: 15px 10px;">TUTAR</th>
+                                    <th style="padding: 15px 10px;">DURUM</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siparisListesiTab">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 30px; color: var(--muted);">⏳
+                                        Siparişler yükleniyor...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-adreslerim" style="display: none;">
+                    <h2 style="color: var(--active-theme); margin-bottom: 20px;">Adres Bilgilerim</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="action-box" onclick="openAdresModal()">
+                            <div style="font-size: 30px; color: var(--active-theme); margin-bottom: 10px;">+</div>
+                            <strong style="color: var(--text);">Yeni Adres Ekle</strong>
+                        </div>
+                        <div id="adresListesiContainer" style="display: contents;">
+                            <p style="color: var(--muted); font-size: 13px;">Adresleriniz veritabanından çekiliyor...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-kartlarim" style="display: none;">
+                    <h2 style="color: var(--active-theme); margin-bottom: 20px;">Ödeme Yöntemlerim</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="action-box" onclick="openKartModal()">
+                            <div style="font-size: 30px; color: var(--active-theme); margin-bottom: 10px;">+</div>
+                            <strong style="color: var(--text);">Yeni Kart Ekle</strong>
+                        </div>
+                        <div id="kartListesiContainer" style="display: contents;">
+                            <p style="color: var(--muted); font-size: 13px; margin-top:10px;">Kayıtlı kartınız
+                                bulunmuyor.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-guvenlik" style="display: none;">
+                    <h2 style="color: var(--active-theme); margin-bottom: 20px;">Şifre Güncelleme</h2>
+                    <div style="max-width: 400px;">
+                        <input type="password" id="eskiSifre" class="login-input" placeholder="Mevcut Şifreniz">
+                        <input type="password" id="yeniSifre" class="login-input" placeholder="Yeni Şifreniz">
+                        <button class="checkout-button" onclick="sifreDegistir()">ŞİFREYİ GÜNCELLE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÜRÜN DETAY SAYFASI -->
+    <div id="urunDetayView" style="display: none; padding: 40px 20px; max-width: 1200px; margin: 0 auto;">
+
+        <button onclick="history.back()"
+            style="background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; margin-bottom:20px; display:flex; align-items:center; gap:5px; font-weight:600;"><span
+                style="font-size:18px;">&larr;</span> VİTRİNE DÖN</button>
+
+        <div style="display: flex; gap: 50px; flex-wrap: wrap; margin-bottom: 50px;">
+            <div style="flex: 1; min-width: 300px; position: relative;">
+                <img id="pdpGorsel" src=""
+                    style="width: 100%; max-height: 550px; object-fit: contain; padding: 30px; border-radius: 8px; border: 1px solid var(--border); background: #ffffff;">
+            </div>
+
+            <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                <div id="pdpMarka" style="font-size: 14px; font-weight: 800; color: var(--muted); letter-spacing: 2px;">
+                    MARKA</div>
+                <h1 id="pdpAd" style="font-size: 32px; font-weight: 900; color: var(--text); margin-bottom: 10px;">
+                    Parfüm Adı</h1>
+
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    <div id="pdpPuan" style="color: var(--active-theme); font-size: 16px;">★★★★☆</div>
+                    <span style="color: var(--muted); font-size: 13px; text-decoration: underline; cursor: pointer;"
+                        onclick="document.getElementById('yorumlarSection').scrollIntoView({behavior: 'smooth'})">Yorumlara
+                        git</span>
+                </div>
+
+                <div id="pdpFiyat"
+                    style="font-size: 28px; font-weight: 900; color: var(--active-theme); margin-bottom: 20px;">0,00 TL
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 10px;">Hacim Seçin:
+                    </p>
+                    <select class="vol-select" id="pdpVolSelect" style="max-width: 200px;"></select>
+                </div>
+
+                <button class="checkout-button" onclick="pdpSepeteEkle()"
+                    style="padding: 20px; font-size: 16px; margin-bottom: 40px; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">SEPETE
+                    EKLE</button>
+
+                <div class="pdp-accordion">
+                    <details>
+                        <summary>Açıklama</summary>
+                        <p id="pdpAciklama">Nadir. Egzotik. Ayırt Edici. Bu parfüm, en nadir bileşenlerin ustalıkla
+                            harmanlanmasıyla oluşmuştur. Teninizde gün boyu sürecek lüks bir imza bırakır.</p>
+                    </details>
+                    <details>
+                        <summary>Kullanım Önerileri</summary>
+                        <p>Temiz tene, nabız noktalarına (boyun, bilek içleri) 15-20 cm uzaktan sıkarak uygulayın.
+                            Ovuşturmayın, kokunun kendi kendine oturmasına izin verin.</p>
+                    </details>
+                    <details>
+                        <summary>İçerik</summary>
+                        <p>Alcohol Denat., Fragrance (Parfum), Water (Aqua), Linalool, Benzyl Benzoate, Limonene.</p>
+                    </details>
+                    <details open>
+                        <summary>Koku Notaları</summary>
+                        <p id="pdpNotalar">Yükleniyor...</p>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 60px;">
+            <h2
+                style="color: var(--text); font-size: 24px; font-weight: 800; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 20px;">
+                Görünümünü Tamamla</h2>
+            <div id="pdpOnerilenler" style="display: flex; gap: 20px; overflow-x: auto; padding: 20px 0;">
+            </div>
+        </div>
+
+        <div id="yorumlarSection" style="border-top: 1px solid var(--border); padding-top: 40px;">
+            <h2 style="color: var(--text); font-size: 24px; font-weight: 800; margin-bottom: 30px;">Ürün Yorumu</h2>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 40px;">
+                <div
+                    style="background: var(--card); padding: 30px; border-radius: 8px; border: 1px solid var(--border); height: fit-content;">
+                    <div id="pdpYorumOzeti"></div>
+                    <div id="pdpYorumFormu"
+                        style="margin-top: 30px; border-top: 1px dashed var(--border); padding-top: 20px;"></div>
+                </div>
+
+                <div>
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                        <select class="vol-select" style="max-width: 200px; margin-bottom: 0;">
+                            <option>Sıralama: En Yeni</option>
+                        </select>
+                    </div>
+                    <div id="pdpYorumlarListesi" style="display: flex; flex-direction: column; gap: 20px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY FOOTER -->
+    <div id="stickyFooter" class="sticky-footer">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img id="stickyImg" src="" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px;">
+            <div>
+                <strong id="stickyMarka"
+                    style="color: var(--active-theme); font-size: 11px; display: block;">MARKA</strong>
+                <span id="stickyAd" style="color: var(--text); font-size: 13px; font-weight: 700;">Parfüm Adı</span>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div id="stickyFiyat" style="color: var(--text); font-weight: 900; font-size: 18px;">0,00 TL</div>
+            <button class="checkout-button" onclick="pdpSepeteEkle()"
+                style="padding: 12px 30px; width: auto; font-size: 13px;">SEPETE EKLE</button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <h4>BİZE ULAŞIN</h4>
+                <div class="footer-contact"><i>📱</i>
+                    <div><strong style="color:var(--text);">0566 987 12 99</strong><br>(Whatsapp)</div>
+                </div>
+                <div class="footer-contact"><i>✉️</i><strong style="color:var(--text);">infokarekoku@gmail.com</strong>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>KURUMSAL</h4>
+                <ul>
+                    <li onclick="showInfoModal('neden')">Neden Karekoku?</li>
+                    <li onclick="showInfoModal('hakkimizda')">Hakkımızda</li>
+                    <li onclick="showInfoModal('iletisim')">İletişim Bilgilerimiz</li>
+                    <li onclick="showInfoModal('blog')">Blog</li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>MÜŞTERİ HİZMETLERİ</h4>
+                <ul>
+                    <li onclick="showInfoModal('sss')">Sıkça Sorulan Sorular</li>
+                    <li onclick="showInfoModal('odeme')">Ödeme ve Teslimat</li>
+                    <li onclick="showInfoModal('iade')">İade Şartları</li>
+                    <li onclick="showInfoModal('gizlilik')">Gizlilik ve Güvenlik</li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODALLAR & ÇEKMECELER -->
+    <div class="overlay" id="overlay" onclick="closeAllDrawers()"></div>
+
+    <div class="drawer" id="cartDrawer">
+        <div class="drawer-header">
+            <h2>Sepetim</h2><button onclick="closeAllDrawers()"
+                style="background:none; border:none; color:var(--text); font-size:30px; cursor:pointer;">&times;</button>
+        </div>
+        <div id="cartItems"></div>
+        <div class="cart-total" id="cartTotal">Ara Toplam: 0,00 ₺</div>
+        <button class="checkout-button" onclick="openCheckout()">SİPARİŞİ TAMAMLA</button>
+    </div>
+
+    <div id="checkoutOverlay" class="login-overlay" onclick="if(event.target===this) closeCheckout()">
+        <div class="login-modal" style="width: 450px; max-height: 90vh; overflow-y: auto;">
+            <button onclick="closeCheckout()"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+
+            <div id="step1-address">
+                <h2 style="color:var(--active-theme); margin-bottom: 20px; font-size: 22px;">1. Teslimat Adresi</h2>
+                <input type="text" id="adresAd" class="login-input" placeholder="Teslim Alacak Kişi (Ad Soyad)">
+                <input type="text" id="adresTel" class="login-input" placeholder="Telefon Numarası (Örn: 05551234567)"
+                    maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="adresIl" class="login-input" placeholder="İl" style="flex:1;">
+                    <input type="text" id="adresIlce" class="login-input" placeholder="İlçe" style="flex:1;">
+                </div>
+                <textarea id="adresDetay" class="login-input" placeholder="Açık Adres (Mahalle, Sokak, Kapı No...)"
+                    style="height: 80px; resize: none;"></textarea>
+                <button class="login-submit" onclick="goToPayment()">ÖDEME ADIMINA GEÇ</button>
+            </div>
+
+            <div id="step2-payment" style="display: none;">
+                <h2 style="color:var(--active-theme); margin-bottom: 15px; font-size: 22px;">2. Sipariş Özeti & Ödeme
+                </h2>
+
+                <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                    <input type="text" id="kuponKoduInput" class="login-input" placeholder="Kupon Kodu (Örn: NAKIT200)"
+                        style="margin-bottom: 0; flex:1; text-transform: uppercase;">
+                    <button class="add-btn" onclick="kuponUygula()"
+                        style="border: 1px solid var(--active-theme); color: var(--active-theme); padding: 0 20px;">UYGULA</button>
+                </div>
+
+                <div id="orderSummaryBox"
+                    style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; border: 1px solid var(--border);">
+                </div>
+
+                <h3 style="color:var(--text); margin-bottom: 15px; font-size: 15px;">Kart Bilgileri</h3>
+                <input type="text" id="kartIsim" class="login-input" placeholder="Kart Üzerindeki İsim"
+                    oninput="this.value = this.value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ ]/g, '')">
+                <input type="text" id="kartNo" class="login-input" placeholder="Kart Numarası" maxlength="16"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="kartSKT" class="login-input" placeholder="Ay/Yıl (Örn: 12/28)" maxlength="5"
+                        oninput="formatSKT(this)" style="flex:1;">
+                    <input type="text" id="kartCVV" class="login-input" placeholder="CVV" maxlength="3"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;">
+                </div>
+
+                <button id="odemeOnayBtn" class="login-submit" onclick="odemeYap()">ÖDEMEYİ ONAYLA</button>
+                <button onclick="backToAddress()"
+                    style="width:100%; background:transparent; border:none; color:var(--muted); margin-top:15px; cursor:pointer; font-weight: 600;">&larr;
+                    Adres Bilgilerine Dön</button>
+            </div>
+
+            <div id="step3-success" style="display: none; text-align: center; padding: 20px 0;">
+                <div style="font-size: 60px; margin-bottom: 10px;">🎉</div>
+                <h2 style="color:var(--active-theme); margin-bottom: 15px; font-size: 26px;">Siparişiniz Alındı!</h2>
+                <p style="color:var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Ödemeniz
+                    başarıyla gerçekleşti. Ürünleriniz en kısa sürede kargoya verilecektir.</p>
+                <p
+                    style="color:var(--text); font-size: 16px; font-weight: bold; background: var(--bg); padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px dashed var(--active-theme);">
+                    Sipariş No: <br><span id="siparisNoText"
+                        style="color:var(--active-theme); font-size: 22px; display:inline-block; margin-top: 5px;"></span>
+                </p>
+
+                <button class="login-submit" onclick="finishOrder()">ALIŞVERİŞE DÖN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="adresModalOverlay" class="login-overlay" onclick="if(event.target===this) closeAdresModal()">
+        <div class="login-modal">
+            <button onclick="closeAdresModal()"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+            <h2 style="color:var(--active-theme); margin-bottom: 20px;">Yeni Adres Ekle</h2>
+            <input type="text" id="yeniAdresBaslik" class="login-input" placeholder="Adres Başlığı (Ev, İş vb.)">
+            <input type="text" id="yeniAdresTel" class="login-input" placeholder="Telefon Numarası (Opsiyonel)"
+                maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="yeniAdresIl" class="login-input" placeholder="İl" style="flex:1;">
+                <input type="text" id="yeniAdresIlce" class="login-input" placeholder="İlçe" style="flex:1;">
+            </div>
+            <textarea id="yeniAdresDetay" class="login-input" placeholder="Açık Adres (Sokak, Kapı No vs.)"
+                style="height: 80px; resize: none;"></textarea>
+            <button class="login-submit" onclick="kaydetAdres()">ADRESİ KAYDET</button>
+        </div>
+    </div>
+
+    <div id="kartModalOverlay" class="login-overlay" onclick="if(event.target===this) closeKartModal()">
+        <div class="login-modal">
+            <button onclick="closeKartModal()"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+            <h2 style="color:var(--active-theme); margin-bottom: 20px;">Yeni Kart Ekle</h2>
+            <input type="text" id="yeniKartIsimModal" class="login-input" placeholder="Kart Üzerindeki İsim"
+                oninput="this.value = this.value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ ]/g, '')">
+            <input type="text" id="yeniKartNoModal" class="login-input" placeholder="Kart Numarası" maxlength="16"
+                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="yeniKartSKTModal" class="login-input" placeholder="Ay/Yıl" maxlength="5"
+                    oninput="formatSKT(this)" style="flex:1;">
+                <input type="text" id="yeniKartCVVModal" class="login-input" placeholder="CVV" maxlength="3"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;">
+            </div>
+            <button class="login-submit" onclick="kaydetKart()">KARTI KAYDET</button>
+        </div>
+    </div>
+
+    <div id="loginModal" class="login-overlay" onclick="if(event.target===this) toggleLogin()">
+        <div class="login-modal">
+            <button onclick="toggleLogin()"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+            <div id="tabButtons" style="display:flex; gap:10px; margin-bottom:25px;">
+                <button id="tabLogin" onclick="switchTab('login')"
+                    style="flex:1; padding:12px; background:var(--active-theme); color:#000; font-weight:800; border:none; cursor:pointer; border-radius:6px; font-family:var(--main-font);">GİRİŞ
+                    YAP</button>
+                <button id="tabRegister" onclick="switchTab('register')"
+                    style="flex:1; padding:12px; background:var(--card); color:var(--active-theme); font-weight:800; border:1px solid var(--active-theme); cursor:pointer; border-radius:6px; font-family:var(--main-font);">KAYIT
+                    OL</button>
+            </div>
+            <div id="loginForm">
+                <input type="text" id="loginEmail" class="login-input" placeholder="E-Posta Adresi">
+                <input type="password" id="loginPass" class="login-input" placeholder="Şifre">
+                <div style="text-align: right; margin-top: -5px; margin-bottom: 15px;"><span
+                        style="color: var(--active-theme); font-size: 11px; cursor: pointer; font-weight: 600;"
+                        onclick="switchTab('forgot')">Şifremi Unuttum</span></div>
+                <button class="login-submit" onclick="girisYap()">GİRİŞ</button>
+            </div>
+            <div id="registerForm" style="display:none;">
+                <input type="text" id="regName" class="login-input" placeholder="Ad Soyad">
+                <input type="text" id="regEmail" class="login-input" placeholder="E-Posta Adresi">
+                <input type="text" id="regPhone" class="login-input" placeholder="Telefon Numarası (Opsiyonel)"
+                    maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <input type="password" id="regPass" class="login-input" placeholder="Şifre">
+                <button class="login-submit" onclick="kayitOl()">KAYIT OL</button>
+            </div>
+            <div id="forgotForm" style="display:none;">
+                <h3 style="color:var(--text); margin-bottom: 15px; font-size: 16px; text-align: center;">Şifre Sıfırlama
+                </h3>
+
+                <div id="forgotStep1">
+                    <p style="color:var(--muted); font-size:12px; margin-bottom:15px; text-align:center;">Hesabınıza
+                        kayıtlı e-posta adresini girin. Size 6 haneli bir kod göndereceğiz.</p>
+                    <input type="text" id="forgotEmail" class="login-input" placeholder="E-Posta Adresi">
+                    <button class="login-submit" onclick="sifreSifirla()">DOĞRULAMA KODU GÖNDER</button>
+                </div>
+
+                <div id="forgotStep2" style="display:none;">
+                    <p style="color:var(--active-theme); font-size:12px; margin-bottom:15px; text-align:center;">
+                        E-postanıza gelen kodu ve yeni şifrenizi girin.</p>
+                    <input type="text" id="forgotCode" class="login-input" placeholder="Mailinize gelen 6 haneli kod..."
+                        maxlength="6"
+                        style="text-align: center; font-weight: 800; font-size: 16px; letter-spacing: 2px;">
+                    <input type="password" id="forgotNewPass" class="login-input"
+                        placeholder="Yeni Şifreniz (En az 6 karakter)">
+                    <button class="login-submit" onclick="yeniSifreBelirle()">ŞİFREYİ GÜNCELLE</button>
+                </div>
+
+                <button onclick="switchTab('login')"
+                    style="width:100%; background:transparent; border:none; color:var(--muted); margin-top:15px; cursor:pointer; font-weight: 600;">&larr;
+                    Giriş Ekranına Dön</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quizOverlay" class="login-overlay" onclick="if(event.target===this) closeQuiz()">
+        <div class="login-modal" style="width: 450px; text-align: center; max-height: 90vh; overflow-y: auto;">
+            <button onclick="closeQuiz()"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+
+            <div id="quizQ1">
+                <h2 style="color:var(--active-theme); margin-bottom: 25px; font-size: 20px;">1. Parfüm kimin için?</h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="filter-btn" onclick="nextQ(1, 'erkek')">Erkek</button>
+                    <button class="filter-btn" onclick="nextQ(1, 'kadin')">Kadın</button>
+                    <button class="filter-btn" onclick="nextQ(1, 'unisex')">Unisex</button>
+                </div>
+            </div>
+            <div id="quizQ2" style="display:none;">
+                <h2 style="color:var(--active-theme); margin-bottom: 25px; font-size: 20px;">2. Mevsim?</h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="filter-btn" onclick="nextQ(2, 'yaz')">Yaz</button>
+                    <button class="filter-btn" onclick="nextQ(2, 'kis')">Kış</button>
+                    <button class="filter-btn" onclick="nextQ(2, 'dortmevsim')">Dört Mevsim</button>
+                </div>
+            </div>
+            <div id="quizQ3" style="display:none;">
+                <h2 style="color:var(--active-theme); margin-bottom: 25px; font-size: 20px;">3. Nerede kullanacaksın?
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="filter-btn" onclick="nextQ(3, 'ofis')">Ofis / Okul</button>
+                    <button class="filter-btn" onclick="nextQ(3, 'gece')">Gece / Davet</button>
+                    <button class="filter-btn" onclick="nextQ(3, 'spor')">Spor</button>
+                </div>
+            </div>
+            <div id="quizQ4" style="display:none;">
+                <h2 style="color:var(--active-theme); margin-bottom: 25px; font-size: 20px;">4. Hangi notalar?</h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="filter-btn" onclick="nextQ(4, 'ferah')">Ferah</button>
+                    <button class="filter-btn" onclick="nextQ(4, 'odunsu')">Odunsu</button>
+                    <button class="filter-btn" onclick="nextQ(4, 'baharatli')">Baharatlı</button>
+                    <button class="filter-btn" onclick="nextQ(4, 'ciceksi')">Çiçeksi</button>
+                    <button class="filter-btn" onclick="nextQ(4, 'gurme')">Gurme</button>
+                    <button class="filter-btn" onclick="nextQ(4, 'meyvemsi')">Meyvemsi</button>
+                </div>
+            </div>
+            <div id="quizQ5" style="display:none;">
+                <h2 style="color:var(--active-theme); margin-bottom: 25px; font-size: 20px;">5. Nasıl bir parfüm?</h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="filter-btn" onclick="nextQ(5, 'nis')">Niş</button>
+                    <button class="filter-btn" onclick="nextQ(5, 'designer')">Designer</button>
+                    <button class="filter-btn" onclick="nextQ(5, '')">Fark Etmez</button>
+                </div>
+            </div>
+            <div id="quizResult" style="display:none;">
+                <div style="font-size: 45px; margin-bottom: 10px;">✨</div>
+                <h2 style="color:var(--active-theme); margin-bottom: 20px; font-size: 22px;">İşte İmza Kokuların!</h2>
+                <div id="quizResultList"
+                    style="display:flex; flex-direction:column; gap:12px; margin-bottom: 25px; text-align: left;"></div>
+                <button class="login-submit" onclick="closeQuiz()">VİTRİNE DÖN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="infoModalOverlay" class="login-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="info-modal">
+            <button onclick="document.getElementById('infoModalOverlay').style.display='none'"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--active-theme); font-size:24px; cursor:pointer;">&times;</button>
+            <h2 id="infoTitle">Başlık</h2>
+            <div id="infoContent" class="info-modal-content"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script type="module" src="js/main.js"></script>
+    <script src="js/shop.js?v=2.1"></script>
+
+</body>
+
+</html>
