@@ -43,76 +43,8 @@
     <div id="anaSayfaView">
         <div class="shop-layout">
 
-            <!-- SOL KALICI SİDEBAR -->
-            <aside class="shop-sidebar">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">
-                    <h3 style="font-size: 16px; color: var(--active-theme); margin: 0;">FİLTRELER</h3>
-                    <button class="mobile-close-btn" onclick="toggleMobileSidebar()"
-                        style="background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; display: none;">✕</button>
-                </div>
-
-                <div class="sidebar-filter-group">
-                    <details open>
-                        <summary>Kategori</summary>
-                        <div id="kategoriFiltreleri" class="filter-content">
-                            <label class="custom-cb"><input type="checkbox" value="nis" onchange="filtreleriUygula()">
-                                Niş Parfüm</label>
-                            <label class="custom-cb"><input type="checkbox" value="designer"
-                                    onchange="filtreleriUygula()"> Designer Parfüm</label>
-                        </div>
-                    </details>
-                </div>
-
-                <div class="sidebar-filter-group">
-                    <details open>
-                        <summary>Cinsiyet</summary>
-                        <div id="cinsiyetFiltreleri" class="filter-content">
-                            <label class="custom-cb"><input type="checkbox" value="erkek" onchange="filtreleriUygula()">
-                                Erkek</label>
-                            <label class="custom-cb"><input type="checkbox" value="kadin" onchange="filtreleriUygula()">
-                                Kadın</label>
-                            <label class="custom-cb"><input type="checkbox" value="unisex"
-                                    onchange="filtreleriUygula()"> Unisex</label>
-                        </div>
-                    </details>
-                </div>
-
-                <div class="sidebar-filter-group">
-                    <details open>
-                        <summary>Koku Ailesi</summary>
-                        <div id="kokuFiltreleri" class="filter-content">
-                            <label class="custom-cb"><input type="checkbox" value="odunsu"
-                                    onchange="filtreleriUygula()"> Odunsu</label>
-                            <label class="custom-cb"><input type="checkbox" value="meyvemsi"
-                                    onchange="filtreleriUygula()"> Meyvemsi</label>
-                            <label class="custom-cb"><input type="checkbox" value="ciceksi"
-                                    onchange="filtreleriUygula()"> Çiçeksi</label>
-                            <label class="custom-cb"><input type="checkbox" value="baharatli"
-                                    onchange="filtreleriUygula()"> Baharatlı</label>
-                            <label class="custom-cb"><input type="checkbox" value="ferah" onchange="filtreleriUygula()">
-                                Ferah / Sucul</label>
-                            <label class="custom-cb"><input type="checkbox" value="gurme" onchange="filtreleriUygula()">
-                                Gurme</label>
-                        </div>
-                    </details>
-                </div>
-
-                <div class="sidebar-filter-group">
-                    <details>
-                        <summary>Markalar</summary>
-                        <div id="markaFiltreleri" class="filter-content">
-                            <!-- JS ile otomatik dolacak -->
-                        </div>
-                    </details>
-                </div>
-            </aside>
-
             <!-- SAĞ ANA İÇERİK (VİTRİN) -->
-            <main class="shop-main">
-
-                <!-- MOBİL FİLTRE BUTONU -->
-                <button class="mobile-filter-btn" onclick="toggleMobileSidebar()">⚙️ FİLTRELERİ AÇ / DÜZENLE</button>
+            <main class="shop-main" style="width: 100%; max-width: 1300px; margin: 0 auto;">
 
                 <!-- Daraltılmış Lüks Banner -->
                 <div class="hero-slim">
@@ -154,10 +86,49 @@
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                         <input type="text" id="searchInput" placeholder="İmza kokunuzu, marka veya notaları arayın..."
-                            onkeyup="aramaOnerileriGetir()" autocomplete="off">
+                            onkeyup="debouncedArama()" autocomplete="off">
                         <div id="searchSuggestions" class="suggestions-box"></div>
                     </div>
                 </div>
+
+                <!-- INLINE FILTERS -->
+                <div class="inline-filters" style="display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; z-index: 40; position: relative;">
+                    <div class="filter-dropdown">
+                        <button class="filter-dropdown-btn" onclick="toggleDropdown('kategoriFiltreleri', event)">Kategori ▼</button>
+                        <div class="filter-dropdown-content" id="kategoriFiltreleri">
+                            <label class="custom-cb"><input type="checkbox" value="nis" onchange="filtreleriUygula()"> Niş Parfüm</label>
+                            <label class="custom-cb"><input type="checkbox" value="designer" onchange="filtreleriUygula()"> Designer Parfüm</label>
+                        </div>
+                    </div>
+                    <div class="filter-dropdown">
+                        <button class="filter-dropdown-btn" onclick="toggleDropdown('cinsiyetFiltreleri', event)">Cinsiyet ▼</button>
+                        <div class="filter-dropdown-content" id="cinsiyetFiltreleri">
+                            <label class="custom-cb"><input type="checkbox" value="erkek" onchange="filtreleriUygula()"> Erkek</label>
+                            <label class="custom-cb"><input type="checkbox" value="kadin" onchange="filtreleriUygula()"> Kadın</label>
+                            <label class="custom-cb"><input type="checkbox" value="unisex" onchange="filtreleriUygula()"> Unisex</label>
+                        </div>
+                    </div>
+                    <div class="filter-dropdown">
+                        <button class="filter-dropdown-btn" onclick="toggleDropdown('kokuFiltreleri', event)">Koku Ailesi ▼</button>
+                        <div class="filter-dropdown-content" id="kokuFiltreleri">
+                            <label class="custom-cb"><input type="checkbox" value="odunsu" onchange="filtreleriUygula()"> Odunsu</label>
+                            <label class="custom-cb"><input type="checkbox" value="meyvemsi" onchange="filtreleriUygula()"> Meyvemsi</label>
+                            <label class="custom-cb"><input type="checkbox" value="ciceksi" onchange="filtreleriUygula()"> Çiçeksi</label>
+                            <label class="custom-cb"><input type="checkbox" value="baharatli" onchange="filtreleriUygula()"> Baharatlı</label>
+                            <label class="custom-cb"><input type="checkbox" value="ferah" onchange="filtreleriUygula()"> Ferah / Sucul</label>
+                            <label class="custom-cb"><input type="checkbox" value="gurme" onchange="filtreleriUygula()"> Gurme</label>
+                        </div>
+                    </div>
+                    <div class="filter-dropdown">
+                        <button class="filter-dropdown-btn" onclick="toggleDropdown('markaFiltreleri', event)">Markalar ▼</button>
+                        <div class="filter-dropdown-content" id="markaFiltreleri">
+                            <!-- JS ile otomatik dolacak -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aktif Filtre Rozetleri -->
+                <div id="activeFiltersContainer" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;"></div>
 
                 <!-- Kartlar bu Grid içine dolacak -->
                 <div class="grid" id="urunGrid"></div>
@@ -644,8 +615,9 @@
     </div>
 
     <div id="toast" class="toast"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script type="module" src="js/main.js"></script>
-    <script src="js/shop.js?v=2.1"></script>
+    <script src="js/state.js?v=2.6"></script>
 
 </body>
 

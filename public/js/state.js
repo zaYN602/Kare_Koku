@@ -1,6 +1,6 @@
 
 window.KareState = {
-    API_URL: "http://127.0.0.1:3000",
+    API_URL: "",
     fallbackImg: "https://images.unsplash.com/photo-1615486171448-4fb324aa8eb0?auto=format&fit=crop&w=600&q=80",
     db: [], 
     sepet: [],

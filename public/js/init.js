@@ -41,8 +41,30 @@ function initApp() {
         const searchBar = document.querySelector('.search-bar');
         const box = document.getElementById('searchSuggestions');
         if(box && searchBar && !searchBar.contains(e.target)) box.style.display = 'none';
+        
+        // Açılır menü dışına tıklanınca kapanması
+        if (!e.target.closest('.filter-dropdown')) {
+            document.querySelectorAll('.filter-dropdown-content').forEach(el => el.classList.remove('show'));
+        }
     });
 }
+
+window.toggleDropdown = function(id, event) {
+    if(event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const target = document.getElementById(id);
+    const wasOpen = target.classList.contains('show');
+    
+    // Diğer tüm dropdownları kapat
+    document.querySelectorAll('.filter-dropdown-content').forEach(el => el.classList.remove('show'));
+    
+    // Tıklanan kapalıysa aç
+    if(!wasOpen) {
+        target.classList.add('show');
+    }
+};
 
 window.toggleMobileSidebar = function() { const sidebar = document.querySelector('.shop-sidebar'); const overlay = document.getElementById('sidebarOverlay'); if(sidebar) sidebar.classList.toggle('open'); if(overlay) overlay.classList.toggle('active'); };
 

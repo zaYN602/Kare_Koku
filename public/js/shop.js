@@ -121,7 +121,7 @@ window.renderProducts = function(liste) {
 
         grid.insertAdjacentHTML('beforeend', `
             <div class="card ${themeClass}" style="animation-delay: ${index * 0.05}s;">
-                <img src="${p.gorsel}" onclick="openUrunSayfasi('${p.id}')" onerror="this.src='${KareState.fallbackImg}'" style="cursor: pointer;">
+                <img src="${p.gorsel}" loading="lazy" onclick="openUrunSayfasi('${p.id}')" onerror="this.src='${KareState.fallbackImg}'" style="cursor: pointer;">
                 
                 <div class="brand">${p.marka}</div>
                 <div class="title">${p.ad}</div>
@@ -137,6 +137,11 @@ window.renderProducts = function(liste) {
                 </div>
             </div>`);
     });
+
+    if (typeof gsap !== 'undefined') {
+        gsap.killTweensOf(".card");
+        gsap.fromTo(".card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.05, ease: "power2.out" });
+    }
 };
 
 window.filtreleriUygula = function () {
@@ -158,6 +163,39 @@ window.filtreleriUygula = function () {
         return aramayaUyar && anaKategoriUyar && anaCinsiyetUyar && markayaUyar && kategoriyeUyar && cinsiyeteUyar && kokuyaUyar;
     });
     renderProducts(filtrelenmis);
+    renderActiveFilters();
+};
+
+let aramaTimer;
+window.debouncedArama = function() {
+    clearTimeout(aramaTimer);
+    aramaTimer = setTimeout(() => {
+        aramaOnerileriGetir();
+    }, 300);
+};
+
+window.renderActiveFilters = function() {
+    const container = document.getElementById('activeFiltersContainer');
+    if(!container) return;
+    container.innerHTML = '';
+    
+    document.querySelectorAll('.filter-dropdown-content input:checked').forEach(cb => {
+        const text = cb.parentElement.innerText.trim();
+        const value = cb.value;
+        const id = cb.closest('.filter-dropdown-content').id;
+        
+        container.insertAdjacentHTML('beforeend', `
+            <div class="active-filter-badge" onclick="removeFilter('${id}', '${value}')">
+                ${text} ✖
+            </div>
+        `);
+    });
+};
+
+window.removeFilter = function(containerId, value) {
+    const cb = document.querySelector(`#${containerId} input[value="${value}"]`);
+    if(cb) cb.checked = false;
+    filtreleriUygula();
 };
 
 window.setMainKategori = function(kat, event) {
