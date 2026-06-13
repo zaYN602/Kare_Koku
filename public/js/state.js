@@ -11,7 +11,8 @@ window.KareState = {
     seciliAnaCinsiyet: "",
     seciliPdpID: null,
     aktifYildiz: 5,
-    quizAnswers: { cinsiyet: '', mevsim: '', ortam: '', koku: '', kategori: '' }
+    quizAnswers: { cinsiyet: '', mevsim: '', ortam: '', koku: '', kategori: '' },
+    favoriler: []
 };
 window.KareState.siteInfoContent = {
     "neden": { 

@@ -7,10 +7,14 @@ function initApp() {
     
     const savedUser = sessionStorage.getItem('kareUser');
     const savedID = sessionStorage.getItem('kareID');
+    const savedEmail = sessionStorage.getItem('kareEmail');
+    const savedMailOnayliMi = sessionStorage.getItem('kareMailOnayliMi');
     
     if(savedUser && savedID && savedUser !== 'null') {
         KareState.aktifKullanici = savedUser; 
         KareState.aktifKullaniciID = savedID;
+        KareState.aktifKullaniciEmail = savedEmail;
+        KareState.aktifKullaniciMailOnayliMi = savedMailOnayliMi === 'true' || savedMailOnayliMi === true;
         if(document.getElementById('authBtn')) document.getElementById('authBtn').innerHTML = '👤 ' + KareState.aktifKullanici;
     } else {
         if(document.getElementById('authBtn')) document.getElementById('authBtn').innerHTML = '👤 Giriş Yap / Üye Ol';
@@ -111,6 +115,10 @@ window.handleAuthClick = function() {
         }
         
         showView('hesabimView'); 
+        if(sessionStorage.getItem('kareRol') === 'Admin') {
+            const adminLink = document.getElementById('adminLink');
+            if(adminLink) adminLink.style.display = 'block';
+        }
         try {
             hesapTabGoster('siparisler'); 
             siparisleriGetir();      
@@ -120,9 +128,11 @@ window.handleAuthClick = function() {
     }
 };
 
-window.cikisYap = function() {
-    KareState.aktifKullanici = null; KareState.aktifKullaniciID = null;
+window.cikisYap = async function() {
     sessionStorage.removeItem('kareUser'); sessionStorage.removeItem('kareID');
+    sessionStorage.removeItem('kareEmail'); sessionStorage.removeItem('kareMailOnayliMi');
+    localStorage.removeItem('kareToken');
+    KareState.aktifKullanici = null; KareState.aktifKullaniciID = null;
     if(document.getElementById('authBtn')) document.getElementById('authBtn').innerHTML = '👤 Giriş Yap / Üye Ol';
     showView('anaSayfaView');
     showToast("Başarıyla çıkış yapıldı!");

@@ -10,7 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // 1. FİNANS VE ÖZET VERİLERİNİ ÇEK
 async function adminOzetGetir() {
     try {
-        const response = await fetch(`${API_URL}/api/admin/ozet`);
+        const token = localStorage.getItem('kareToken');
+        const response = await fetch(`${API_URL}/api/admin/ozet`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+            credentials: 'include'
+        });
         if (!response.ok) {
             const errData = await response.json();
             throw new Error(errData.hata || "API hatası");
@@ -25,6 +29,8 @@ async function adminOzetGetir() {
         }
     } catch (err) {
         console.error("Özet çekilemedi:", err);
+        alert("Yetkisiz Erişim. " + err.message);
+        window.location.href = "index.html";
     }
 }
 
@@ -45,7 +51,11 @@ async function adminSiparisleriGetir() {
     const detayBody = document.getElementById('siparislerDetayBody');
 
     try {
-        const response = await fetch(`${API_URL}/api/admin/siparisler`);
+        const token = localStorage.getItem('kareToken');
+        const response = await fetch(`${API_URL}/api/admin/siparisler`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+            credentials: 'include'
+        });
         if (!response.ok) {
             const errData = await response.json();
             throw new Error(errData.hata || "Bilinmeyen API Hatası");
@@ -98,7 +108,11 @@ async function adminStokGetir() {
     if(!tbody) return;
 
     try {
-        const response = await fetch(`${API_URL}/api/admin/stok`);
+        const token = localStorage.getItem('kareToken');
+        const response = await fetch(`${API_URL}/api/admin/stok`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+            credentials: 'include'
+        });
         if (!response.ok) throw new Error("Stok API hatası");
         const stoklar = await response.json();
 
@@ -133,9 +147,14 @@ async function durumGuncelle(siparisID, yeniDurum) {
     }
 
     try {
+        const token = localStorage.getItem('kareToken');
         const response = await fetch(`${API_URL}/api/admin/siparis-guncelle`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            credentials: 'include',
             body: JSON.stringify({ siparisID, yeniDurum })
         });
         if(response.ok) {

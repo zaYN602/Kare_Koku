@@ -1,1 +1,630 @@
-const { sql, poolPromise } = require('../config/db');\nconst { JWT_SECRET } = require('../middlewares/authMiddleware');\nconst jwt = require('jsonwebtoken');\nconst bcrypt = require('bcrypt');\nconst nodemailer = require('nodemailer');\n\nconst apiController = {\n// 1. KULLANICI KAYDI (REGISTER)\n// ==========================================\n    register: async (req, res) => {\n    const { adSoyad, email, telefon, sifre } = req.body;\n    if (!adSoyad || !email || !sifre) {\n        return res.status(400).json({ hata: "Tüm alanları doldurun!" });\n    }\n\n    try {\n        const pool = await poolPromise;\n        const checkUser = await pool.request()\n            .input('email', sql.NVarChar, email)\n            .query('SELECT * FROM Kullanicilar WHERE Email = @email');\n\n        if (checkUser.recordset.length > 0) {\n            return res.status(400).json({ hata: "Bu e-posta adresi zaten kullanılıyor!" });\n        }\n\n        const hashedPassword = await bcrypt.hash(sifre, 10);\n\n        await pool.request()\n            .input('adSoyad', sql.NVarChar, adSoyad)\n            .input('email', sql.NVarChar, email)\n            .input('telefon', sql.NVarChar, telefon || null)\n            .input('sifre', sql.NVarChar, hashedPassword)\n            .query('INSERT INTO Kullanicilar (AdSoyad, Email, Telefon, Sifre) VALUES (@adSoyad, @email, @telefon, @sifre)');\n\n        res.status(200).json({ mesaj: "Kayıt başarıyla oluşturuldu! Giriş yapabilirsiniz." });\n    } catch (err) {\n        console.error("Kayıt Hatası:", err);\n        res.status(500).json({ hata: "Veritabanı hatası!" });\n    }\n},\n\n// ==========================================\n// 2. KULLANICI GİRİŞİ (LOGIN)\n// ==========================================\n    login: async (req, res) => {\n    const { email, sifre } = req.body;\n    if (!email || !sifre) return res.status(400).json({ hata: "E-posta ve şifre zorunludur!" });\n\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('email', sql.NVarChar, email)\n            .query('SELECT * FROM Kullanicilar WHERE Email = @email');\n\n        if (result.recordset.length > 0) {\n            const user = result.recordset[0];\n            const isMatch = await bcrypt.compare(sifre, user.Sifre);\n            if (isMatch) {\n                const token = jwt.sign({ id: user.KullaniciID, email: user.Email, rol: user.Yetki || 'User' }, JWT_SECRET, { expiresIn: '7d' });\n    res.cookie('kareToken', token, { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 });\n    res.status(200).json({ mesaj: "Giriş başarılı", kullanici: user.AdSoyad, id: user.KullaniciID, token: token });\n            } else {\n                res.status(401).json({ hata: "E-posta veya şifre hatalı!" });\n            }\n        } else {\n            res.status(401).json({ hata: "E-posta veya şifre hatalı!" });\n        }\n    } catch (err) {\n        console.error("Giriş Hatası:", err);\n        res.status(500).json({ hata: "Veritabanı hatası!" });\n    }\n},\n\n// ==========================================\n// 3. VİTRİNE ÜRÜN GÖNDER (GET PARFÜMLER)\n// ==========================================\n    getParfumler: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request().query("SELECT * FROM Parfumler");\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        console.error("Parfüm Çekme Hatası:", err);\n        res.status(500).json({ hata: "Veritabanı Hatası!" });\n    }\n},\n\n// ==========================================\n// 4. KUPON KODU DOĞRULAMA\n// ==========================================\n    kuponKontrol: async (req, res) => {\n    const { kod } = req.body;\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('kod', sql.NVarChar, kod)\n            .query("SELECT * FROM Kuponlar WHERE Kod = @kod");\n\n        if(result.recordset.length > 0) {\n            const kupon = result.recordset[0];\n\n            if (kupon.Durum !== 'Aktif' || kupon.KullanilanMiktar >= kupon.KullanimSiniri) {\n                return res.status(400).json({ hata: "Bu kupon kullanılmış veya artık geçerli değil!" });\n            }\n            if (new Date(kupon.BitisTarihi) < new Date()) {\n                return res.status(400).json({ hata: "Bu kuponun süresi dolmuş!" });\n            }\n\n            res.status(200).json({\n                mesaj: "Kupon uygulandı!",\n                tip: kupon.IndirimTipi,\n                deger: kupon.IndirimDegeri\n            });\n        } else {\n            res.status(404).json({ hata: "Geçersiz kupon kodu!" });\n        }\n    } catch (err) {\n        console.error("Kupon Hatası:", err);\n        res.status(500).json({ hata: "Sunucu hatası!" });\n    }\n},\n\n// ==========================================\n// 5. SİPARİŞ KAYDI (TRANSACTION)\n// ==========================================\n    siparisOlustur: async (req, res) => {\n    const { kullaniciID, siparisNo, adSoyad, telefon, sehir, ilce, mahalle, acikAdres, toplamTutar, sepet, kuponKodu } = req.body;\n\n    try {\n        const pool = await poolPromise;\n        const transaction = new sql.Transaction(pool);\n        await transaction.begin();\n\n        try {\n            let requestAdres = new sql.Request(transaction);\n            let checkAdresRes = await requestAdres\n        .input('KullaniciID', sql.Int, kullaniciID)\n        .input('Sehir', sql.NVarChar, sehir)\n        .input('Ilce', sql.NVarChar, ilce)\n        .input('Mahalle', sql.NVarChar, mahalle || 'Belirtilmedi')\n        .input('AcikAdres', sql.NVarChar, acikAdres)\n        .query(`SELECT AdresID FROM Adres_Tablosu\n                WHERE KullaniciID = @KullaniciID AND Sehir = @Sehir AND Ilce = @Ilce\n                AND Mahalle = @Mahalle AND AcikAdres = @AcikAdres`);\n\n    let adresID;\n    if (checkAdresRes.recordset.length > 0) {\n        adresID = checkAdresRes.recordset[0].AdresID;\n    } else {\n        let insertAdres = new sql.Request(transaction);\n        let adresRes = await insertAdres\n            .input('KullaniciID', sql.Int, kullaniciID)\n            .input('Sehir', sql.NVarChar, sehir)\n            .input('Ilce', sql.NVarChar, ilce)\n            .input('Mahalle', sql.NVarChar, mahalle || 'Belirtilmedi')\n            .input('AcikAdres', sql.NVarChar, acikAdres)\n            .query(`INSERT INTO Adres_Tablosu (KullaniciID, Sehir, Ilce, Mahalle, AcikAdres)\n                    OUTPUT INSERTED.AdresID VALUES (@KullaniciID, @Sehir, @Ilce, @Mahalle, @AcikAdres)`);\n        adresID = adresRes.recordset[0].AdresID;\n    }\n\n            let requestSiparis = new sql.Request(transaction);\n            let siparisRes = await requestSiparis\n                .input('KullaniciID', sql.Int, kullaniciID)\n                .input('AdresID', sql.Int, adresID)\n                .input('PersonelID', sql.Int, 2)\n                .input('ToplamTutar', sql.Decimal(15,2), toplamTutar)\n                .input('SiparisDurumu', sql.NVarChar, 'Yeni')\n                .query(`INSERT INTO Siparisler (KullaniciID, AdresID, PersonelID, ToplamTutar, SiparisDurumu, SiparisTarihi)\n                        OUTPUT INSERTED.SiparisID VALUES (@KullaniciID, @AdresID, @PersonelID, @ToplamTutar, @SiparisDurumu, GETDATE())`);\n            let siparisID = siparisRes.recordset[0].SiparisID;\n\n            for (let urun of sepet) {\n                let requestStok = new sql.Request(transaction);\n\n                let stokKontrolRes = await requestStok\n                    .input('CheckParfumID', sql.Int, urun.id)\n                    .query('SELECT Kalan_Stok_ml, Ad FROM Parfumler WHERE ParfumID = @CheckParfumID');\n\n                let mevcutStok = stokKontrolRes.recordset[0].Kalan_Stok_ml;\n                let parfumAdi = stokKontrolRes.recordset[0].Ad;\n                let istenenMiktar = urun.ml * urun.adet;\n\n                if (mevcutStok < istenenMiktar) {\n                    throw new Error(`${parfumAdi} için yeterli stok bulunmuyor! (Mevcut: ${mevcutStok}ml)`);\n                }\n\n                let requestFiyat = new sql.Request(transaction);\n                let satisFiyatRes = await requestFiyat\n                    .input('ParfumID', sql.Int, urun.id)\n                    .input('Hacim', sql.Int, urun.ml)\n                    .query('SELECT SatisID FROM Parfum_Fiyatlari WHERE ParfumID = @ParfumID AND Hacim_ml = @Hacim');\n\n                let finalSatisID;\n                if (satisFiyatRes.recordset.length > 0) {\n                    finalSatisID = satisFiyatRes.recordset[0].SatisID;\n                } else {\n                    let requestInsertSatis = new sql.Request(transaction);\n                    let insertSatis = await requestInsertSatis\n                        .input('ParfumID2', sql.Int, urun.id)\n                        .input('Hacim2', sql.Int, urun.ml)\n                        .input('Fiyat2', sql.Decimal(10,2), urun.fiyat)\n                        .query(`INSERT INTO Parfum_Fiyatlari (ParfumID, Hacim_ml, SatisFiyati)\n                                OUTPUT INSERTED.SatisID VALUES (@ParfumID2, @Hacim2, @Fiyat2)`);\n                    finalSatisID = insertSatis.recordset[0].SatisID;\n                }\n\n                let requestDetay = new sql.Request(transaction);\n                await requestDetay\n                    .input('SiparisID', sql.Int, siparisID)\n                    .input('SatisID', sql.Int, finalSatisID)\n                    .input('Adet', sql.Int, urun.adet)\n                    .input('SatisFiyati', sql.Decimal(10,2), urun.fiyat)\n                    .input('Maliyet', sql.Decimal(10,2), 0)\n                    .query(`INSERT INTO Siparis_Detay (SiparisID, SatisID, Adet, SatisFiyati, SatisAnlikMaliyet)\n                            VALUES (@SiparisID, @SatisID, @Adet, @SatisFiyati, @Maliyet)`);\n\n                let requestUpdateStok = new sql.Request(transaction);\n                await requestUpdateStok\n                    .input('Dusulecek', sql.Int, (urun.ml * urun.adet))\n                    .input('ParfumID3', sql.Int, urun.id)\n                    .query(`UPDATE Parfumler SET Kalan_Stok_ml = Kalan_Stok_ml - @Dusulecek WHERE ParfumID = @ParfumID3`);\n            }\n\n            let requestOdeme = new sql.Request(transaction);\n            await requestOdeme\n                .input('SiparisID', sql.Int, siparisID)\n                .input('PayTR', sql.NVarChar, siparisNo)\n                .input('Komisyon', sql.Decimal(10,2), (toplamTutar * 0.02))\n                .input('Durum', sql.NVarChar, 'Başarılı')\n                .query(`INSERT INTO Odeme_Detay (SiparisID, PayTR_IslemNo, KomisyonKesinti, Durum)\n                        VALUES (@SiparisID, @PayTR, @Komisyon, @Durum)`);\n\n            if (kuponKodu) {\n                let requestKupon = new sql.Request(transaction);\n                await requestKupon\n                    .input('kod', sql.NVarChar, kuponKodu)\n                    .query(`UPDATE Kuponlar\n                            SET KullanilanMiktar = KullanilanMiktar + 1,\n                                Durum = CASE WHEN KullanilanMiktar + 1 >= KullanimSiniri THEN 'Kullanıldı' ELSE Durum END\n                            WHERE Kod = @kod`);\n            }\n\n            await transaction.commit();\n            res.status(200).json({ mesaj: "Siparişiniz başarıyla alındı!" });\n\n        } catch (innerErr) {\n            await transaction.rollback();\n            console.error("SQL Transaction Hatası:", innerErr);\n            res.status(500).json({ hata: "Sipariş işlenirken veritabanı hatası oluştu: " + innerErr.message });\n        }\n    } catch (err) {\n        console.error("Sunucu Bağlantı Hatası:", err);\n        res.status(500).json({ hata: "SQL Sunucusuna bağlanılamadı!" });\n    }\n},\n\n// ==========================================\n// 6. GEÇMİŞ SİPARİŞLERİM\n// ==========================================\napp.get('/api/siparislerim/:kullaniciID', async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('id', sql.Int, req.params.kullaniciID)\n            .query(`\n                SELECT\n                    s.SiparisID,\n                    s.ToplamTutar,\n                    s.SiparisDurumu,\n                    s.SiparisTarihi,\n                    (\n                        SELECT STRING_AGG(p.Ad + ' (' + CAST(pf.Hacim_ml AS VARCHAR) + 'ml)', ', ')\n                        FROM Siparis_Detay sd\n                        INNER JOIN Parfum_Fiyatlari pf ON sd.SatisID = pf.SatisID\n                        INNER JOIN Parfumler p ON pf.ParfumID = p.ParfumID\n                        WHERE sd.SiparisID = s.SiparisID\n                    ) AS Urunler\n                FROM Siparisler s\n                WHERE s.KullaniciID = @id\n                ORDER BY s.SiparisTarihi DESC\n            `);\n\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        console.error("Siparişlerim Hatası DETAYLI:", err.message);\n        res.status(500).json({ hata: "Siparişler getirilemedi. Hata: " + err.message });\n    }\n},\n\n// ==========================================\n// 7. KAYITLI ADRESLERİM\n// ==========================================\napp.get('/api/adreslerim/:kullaniciID', async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('id', sql.Int, req.params.kullaniciID)\n            .query(`\n                SELECT * FROM Adres_Tablosu\n                WHERE KullaniciID = @id\n                ORDER BY AdresID DESC\n            `);\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        console.error("Adreslerim Hatası:", err);\n        res.status(500).json({ hata: "Adresler getirilemedi!" });\n    }\n},\n\n// ==========================================\n// 8. E-POSTA İLE DOĞRULAMA KODU GÖNDER VE ŞİFRE SIFIRLA\n// ==========================================\nconst sifreSifirlamaKodlari = {};\n\n    sifreSifirla: async (req, res) => {\n    const { email } = req.body;\n\n    let transporter = nodemailer.createTransport({\n        service: 'gmail',\n        auth: {\n            user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS\n        }\n    });\n\n    try {\n        const pool = await poolPromise;\n        const user = await pool.request()\n            .input('email', sql.NVarChar, email)\n            .query("SELECT AdSoyad FROM Kullanicilar WHERE Email = @email");\n\n        if (user.recordset.length > 0) {\n            const ad = user.recordset[0].AdSoyad;\n            const dogrulamaKodu = Math.floor(100000 + Math.random() * 900000).toString();\n\n            sifreSifirlamaKodlari[email] = {\n                kod: dogrulamaKodu,\n                zaman: Date.now() + 15 * 60 * 1000\n            };\n\n            let mailOptions = {\n                from: '"KareKoku Destek" <infokarekoku@gmail.com>',\n                to: email,\n                subject: 'Karekoku Şifre Sıfırlama Kodu',\n                html: `<h1>Merhaba ${ad},</h1>\n                       <p>Şifrenizi sıfırlamak için 6 haneli doğrulama kodunuz aşağıdadır:</p>\n                       <h2 style="color: #cca76a; font-size: 32px; letter-spacing: 5px;">${dogrulamaKodu}</h2>\n                       <p>Bu kod 15 dakika boyunca geçerlidir. Kodunuzu kimseyle paylaşmayın.</p>`\n            };\n\n            await transporter.sendMail(mailOptions);\n            res.json({ mesaj: "Doğrulama kodu e-posta adresinize gönderildi!" });\n        } else {\n            res.status(404).json({ hata: "Bu e-posta adresi sistemde kayıtlı değil!" });\n        }\n    } catch (err) {\n        console.error("E-posta Gönderme Hatası:", err);\n        res.status(500).json({ hata: "İşlem sırasında hata oluştu!" });\n    }\n},\n\n    sifreYeniBelirle: async (req, res) => {\n    const { email, kod, yeniSifre } = req.body;\n\n    if (!sifreSifirlamaKodlari[email]) {\n        return res.status(400).json({ hata: "Geçersiz veya süresi dolmuş kod işlemi!" });\n    }\n\n    if (sifreSifirlamaKodlari[email].zaman < Date.now()) {\n        delete sifreSifirlamaKodlari[email];\n        return res.status(400).json({ hata: "Kodun süresi dolmuş. Lütfen tekrar kod isteyin." });\n    }\n\n    if (sifreSifirlamaKodlari[email].kod !== kod) {\n        return res.status(400).json({ hata: "Hatalı doğrulama kodu girdiniz!" });\n    }\n\n    try {\n        const hashedSifre = await bcrypt.hash(yeniSifre, 10);\n        const pool = await poolPromise;\n        await pool.request()\n            .input('email', sql.NVarChar, email)\n            .input('yeniSifre', sql.NVarChar, hashedSifre)\n            .query("UPDATE Kullanicilar SET Sifre = @yeniSifre WHERE Email = @email");\n\n        delete sifreSifirlamaKodlari[email];\n        res.status(200).json({ mesaj: "Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz." });\n    } catch (err) {\n        console.error("Şifre güncelleme hatası:", err);\n        res.status(500).json({ hata: "Veritabanı hatası oluştu!" });\n    }\n},\n\n// ==========================================\n// 9. KULLANICI ŞİFRE DEĞİŞTİRME\n// ==========================================\n    sifreDegistir: async (req, res) => {\n    const { kullaniciID, eskiSifre, yeniSifre } = req.body;\n\n    if (!kullaniciID || !eskiSifre || !yeniSifre) {\n        return res.status(400).json({ hata: "Lütfen eski ve yeni şifrenizi girin!" });\n    }\n\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('id', sql.Int, kullaniciID)\n            .query('SELECT Sifre FROM Kullanicilar WHERE KullaniciID = @id');\n\n        if (result.recordset.length === 0) {\n            return res.status(404).json({ hata: "Kullanıcı bulunamadı!" });\n        }\n\n        const user = result.recordset[0];\n        const isMatch = await bcrypt.compare(eskiSifre, user.Sifre);\n\n        if (!isMatch) {\n            return res.status(401).json({ hata: "Mevcut şifrenizi yanlış girdiniz!" });\n        }\n\n        const hashedYeniSifre = await bcrypt.hash(yeniSifre, 10);\n        await pool.request()\n            .input('id', sql.Int, kullaniciID)\n            .input('yeniSifre', sql.NVarChar, hashedYeniSifre)\n            .query('UPDATE Kullanicilar SET Sifre = @yeniSifre WHERE KullaniciID = @id');\n\n        res.status(200).json({ mesaj: "Şifreniz başarıyla güncellendi!" });\n\n    } catch (err) {\n        console.error("Şifre Değiştirme Hatası:", err);\n        res.status(500).json({ hata: "Veritabanı hatası!" });\n    }\n},\n\n// ==========================================\n// 10. YENİ ADRES EKLEME\n// ==========================================\n    adresEkle: async (req, res) => {\n    const kullaniciID = req.user.id;\n    const {, baslik, telefon, il, ilce, acikAdres } = req.body;\n\n    if (!kullaniciID || !il || !ilce || !acikAdres) {\n        return res.status(400).json({ hata: "Lütfen İl, İlçe ve Açık Adres alanlarını doldurun!" });\n    }\n\n    try {\n        const pool = await poolPromise;\n\n        const checkAdres = await pool.request()\n            .input('KullaniciID', sql.Int, kullaniciID)\n            .input('Sehir', sql.NVarChar, il)\n            .input('Ilce', sql.NVarChar, ilce)\n            .input('AcikAdres', sql.NVarChar, acikAdres)\n            .query(`SELECT AdresID FROM Adres_Tablosu\n                    WHERE KullaniciID = @KullaniciID\n                    AND Sehir = @Sehir\n                    AND Ilce = @Ilce\n                    AND AcikAdres = @AcikAdres`);\n\n        if (checkAdres.recordset.length > 0) {\n            return res.status(400).json({ hata: "Bu adres zaten kayıtlı! Aynı adresi tekrar ekleyemezsiniz." });\n        }\n\n        await pool.request()\n            .input('KullaniciID', sql.Int, kullaniciID)\n            .input('AdresBasligi', sql.NVarChar, baslik || 'Ev')\n            .input('Telefon', sql.NVarChar, telefon || '')\n            .input('Sehir', sql.NVarChar, il)\n            .input('Ilce', sql.NVarChar, ilce)\n            .input('Mahalle', sql.NVarChar, 'Belirtilmedi')\n            .input('AcikAdres', sql.NVarChar, acikAdres)\n            .query(`INSERT INTO Adres_Tablosu (KullaniciID, AdresBasligi, Telefon, Sehir, Ilce, Mahalle, AcikAdres)\n                    VALUES (@KullaniciID, @AdresBasligi, @Telefon, @Sehir, @Ilce, @Mahalle, @AcikAdres)`);\n\n        res.status(200).json({ mesaj: "Yeni adresiniz başarıyla kaydedildi!" });\n    } catch (err) {\n        console.error("Adres Ekleme SQL Hatası:", err.message);\n        res.status(500).json({ hata: "Veritabanı Hatası: " + err.message });\n    }\n},\n\n// ==========================================\n// 11. ADRES SİLME\n// ==========================================\n    adresSil: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const checkSiparis = await pool.request()\n            .input('id', sql.Int, req.params.adresID)\n            .query("SELECT SiparisID FROM Siparisler WHERE AdresID = @id");\n\n        if (checkSiparis.recordset.length > 0) {\n             return res.status(400).json({ hata: "Bu adrese ait geçmiş siparişleriniz var. Adres silinemez!" });\n        }\n\n        await pool.request()\n            .input('id', sql.Int, req.params.adresID)\n            .query("DELETE FROM Adres_Tablosu WHERE AdresID = @id");\n\n        res.status(200).json({ mesaj: "Adres başarıyla silindi!" });\n    } catch (err) {\n        console.error("Adres Silme Hatası:", err);\n        res.status(500).json({ hata: "Veritabanı silme hatası!" });\n    }\n},\n\n// ==========================================\n// 12. PARFÜM YORUMLARINI GETİR (GET)\n// ==========================================\n    getYorumlar: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request()\n            .input('parfumID', sql.Int, req.params.parfumID)\n            .query(`\n                SELECT y.YorumID, y.YorumMetni, y.Tarih, y.Puan, k.AdSoyad\n                FROM Yorumlar y\n                INNER JOIN Kullanicilar k ON y.KullaniciID = k.KullaniciID\n                WHERE y.ParfumID = @parfumID\n                ORDER BY y.Tarih DESC\n            `);\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        console.error("Yorum Çekme Hatası:", err.message);\n        res.status(500).json({ hata: "Yorumlar yüklenirken hata oluştu!" });\n    }\n},\n\n// ==========================================\n// 13. YENİ YORUM EKLE (POST)\n// ==========================================\n    yorumEkle: async (req, res) => {\n    const { parfumID, kullaniciID, yorumMetni, puan } = req.body;\n\n    if (!parfumID || !kullaniciID || !yorumMetni) {\n        return res.status(400).json({ hata: "Yorum alanı boş bırakılamaz!" });\n    }\n\n    try {\n        const pool = await poolPromise;\n        await pool.request()\n            .input('parfumID', sql.Int, parfumID)\n            .input('kullaniciID', sql.Int, kullaniciID)\n            .input('yorumMetni', sql.NVarChar, yorumMetni)\n            .input('puan', sql.Int, puan || 5)\n            .query(`INSERT INTO Yorumlar (ParfumID, KullaniciID, YorumMetni, Puan, Tarih)\n                    VALUES (@parfumID, @kullaniciID, @yorumMetni, @puan, GETDATE())`);\n\n        res.status(200).json({ mesaj: "Yorumunuz başarıyla gönderildi!" });\n    } catch (err) {\n        console.error("Yorum Ekleme Hatası:", err.message);\n        res.status(500).json({ hata: "Yorum kaydedilirken veritabanı hatası oluştu!" });\n    }\n},\n\n// ==========================================\n// 14. ADMIN: TÜM SİPARİŞLERİ GETİR (Süper Güvenli Form)\n// ==========================================\n    adminSiparisler: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        // 🚨 JOIN kullanmadan, verileri doğrudan alt sorguyla çekiyoruz. Müşteri silinse bile patlamaz!\n        const result = await pool.request().query(`\n            SELECT\n                s.SiparisID,\n                ISNULL((SELECT TOP 1 k.AdSoyad FROM Kullanicilar k WHERE k.KullaniciID = s.KullaniciID), 'Bilinmeyen Müşteri') AS AdSoyad,\n                ISNULL(s.ToplamTutar, 0) AS ToplamTutar,\n                ISNULL(s.SiparisDurumu, 'Yeni') AS SiparisDurumu,\n                ISNULL(s.SiparisTarihi, GETDATE()) AS SiparisTarihi\n            FROM Siparisler s\n            ORDER BY s.SiparisTarihi DESC\n        `);\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        console.error("🚨 Admin Sipariş Hatası:", err.message);\n        res.status(500).json({ hata: "Siparişler çekilirken SQL hatası: " + err.message });\n    }\n},\n\n// ==========================================\n// 15. ADMIN: FİNANS VE ÖZET BİLGİLER\n// ==========================================\n    adminOzet: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const gelirResult = await pool.request().query("SELECT ISNULL(SUM(ToplamTutar), 0) as ToplamGelir FROM Siparisler WHERE SiparisDurumu != 'İptal'");\n        const bekleyenResult = await pool.request().query("SELECT COUNT(SiparisID) as Bekleyen FROM Siparisler WHERE SiparisDurumu IN ('Yeni', 'Hazırlanıyor')");\n\n        res.status(200).json({\n            ToplamGelir: gelirResult.recordset[0].ToplamGelir,\n            BekleyenSiparis: bekleyenResult.recordset[0].Bekleyen,\n            KritikStok: 3\n        });\n    } catch (err) {\n        console.error("🚨 Admin Özet Hatası:", err.message);\n        res.status(500).json({ hata: "Özet çekilemedi: " + err.message });\n    }\n},\n\n// ==========================================\n// 16. ADMIN: STOK DURUMU\n// ==========================================\n    adminStok: async (req, res) => {\n    try {\n        const pool = await poolPromise;\n        const result = await pool.request().query(`SELECT ParfumID, Marka, Ad FROM Parfumler ORDER BY Marka ASC`);\n        res.status(200).json(result.recordset);\n    } catch (err) {\n        res.status(500).json({ hata: "Stok çekilemedi" });\n    }\n},\n\n// ==========================================\n// 17. ADMIN: SİPARİŞ DURUMU GÜNCELLEME\n// ==========================================\n    adminSiparisGuncelle: async (req, res) => {\n    const { siparisID, yeniDurum } = req.body;\n    try {\n        const pool = await poolPromise;\n        await pool.request()\n            .input('id', sql.Int, siparisID)\n            .input('durum', sql.NVarChar, yeniDurum)\n            .query("UPDATE Siparisler SET SiparisDurumu = @durum WHERE SiparisID = @id");\n        res.status(200).json({ mesaj: "Güncellendi" });\n    } catch (err) {\n        res.status(500).json({ hata: "Güncelleme başarısız" });\n    }\n},\n\n// SUNUCUYU BAŞLAT\nconst PORT = 3000;\napp.listen(PORT, () => {\n    console.log(`✅ Karekoku Garsonu mesaide! (Port: ${PORT})`);\n},\n};\n\nmodule.exports = apiController;
+const { sql, poolPromise } = require('../config/db');
+const { JWT_SECRET } = require('../middlewares/authMiddleware');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+
+const apiController = {
+// 1. KULLANICI KAYDI (REGISTER)
+// ==========================================
+    register: async (req, res) => {
+    const { adSoyad, email, telefon, sifre } = req.body;
+    if (!adSoyad || !email || !sifre) {
+        return res.status(400).json({ hata: "Tüm alanları doldurun!" });
+    }
+
+    try {
+        const pool = await poolPromise;
+        const checkUser = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT * FROM Kullanicilar WHERE Email = @email');
+
+        if (checkUser.recordset.length > 0) {
+            return res.status(400).json({ hata: "Bu e-posta adresi zaten kullanılıyor!" });
+        }
+
+        const hashedPassword = await bcrypt.hash(sifre, 10);
+
+        await pool.request()
+            .input('adSoyad', sql.NVarChar, adSoyad)
+            .input('email', sql.NVarChar, email)
+            .input('telefon', sql.NVarChar, telefon || null)
+            .input('sifre', sql.NVarChar, hashedPassword)
+            .query('INSERT INTO Kullanicilar (AdSoyad, Email, Telefon, Sifre) VALUES (@adSoyad, @email, @telefon, @sifre)');
+
+        res.status(200).json({ mesaj: "Kayıt başarıyla oluşturuldu! Giriş yapabilirsiniz." });
+    } catch (err) {
+        console.error("Kayıt Hatası:", err);
+        res.status(500).json({ hata: "Veritabanı hatası!" });
+    }
+},
+
+// ==========================================
+// 2. KULLANICI GİRİŞİ (LOGIN)
+// ==========================================
+    login: async (req, res) => {
+    const { email, sifre } = req.body;
+    if (!email || !sifre) return res.status(400).json({ hata: "E-posta ve şifre zorunludur!" });
+
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT * FROM Kullanicilar WHERE Email = @email');
+
+        if (result.recordset.length > 0) {
+            const user = result.recordset[0];
+            const isMatch = await bcrypt.compare(sifre, user.Sifre);
+            if (isMatch) {
+                const token = jwt.sign({ id: user.KullaniciID, email: user.Email, rol: user.Yetki || 'User' }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('kareToken', token, { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.status(200).json({ mesaj: "Giriş başarılı", kullanici: user.AdSoyad, id: user.KullaniciID, token: token });
+            } else {
+                res.status(401).json({ hata: "E-posta veya şifre hatalı!" });
+            }
+        } else {
+            res.status(401).json({ hata: "E-posta veya şifre hatalı!" });
+        }
+    } catch (err) {
+        console.error("Giriş Hatası:", err);
+        res.status(500).json({ hata: "Veritabanı hatası!" });
+    }
+},
+
+// ==========================================
+// 3. VİTRİNE ÜRÜN GÖNDER (GET PARFÜMLER)
+// ==========================================
+    getParfumler: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request().query("SELECT * FROM Parfumler");
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        console.error("Parfüm Çekme Hatası:", err);
+        res.status(500).json({ hata: "Veritabanı Hatası!" });
+    }
+},
+
+// ==========================================
+// 4. KUPON KODU DOĞRULAMA
+// ==========================================
+    kuponKontrol: async (req, res) => {
+    const { kod } = req.body;
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('kod', sql.NVarChar, kod)
+            .query("SELECT * FROM Kuponlar WHERE Kod = @kod");
+
+        if(result.recordset.length > 0) {
+            const kupon = result.recordset[0];
+
+            if (kupon.Durum !== 'Aktif' || kupon.KullanilanMiktar >= kupon.KullanimSiniri) {
+                return res.status(400).json({ hata: "Bu kupon kullanılmış veya artık geçerli değil!" });
+            }
+            if (new Date(kupon.BitisTarihi) < new Date()) {
+                return res.status(400).json({ hata: "Bu kuponun süresi dolmuş!" });
+            }
+
+            res.status(200).json({
+                mesaj: "Kupon uygulandı!",
+                tip: kupon.IndirimTipi,
+                deger: kupon.IndirimDegeri
+            });
+        } else {
+            res.status(404).json({ hata: "Geçersiz kupon kodu!" });
+        }
+    } catch (err) {
+        console.error("Kupon Hatası:", err);
+        res.status(500).json({ hata: "Sunucu hatası!" });
+    }
+},
+
+// ==========================================
+// 5. SİPARİŞ KAYDI (TRANSACTION)
+// ==========================================
+    siparisOlustur: async (req, res) => {
+    const { kullaniciID, siparisNo, adSoyad, telefon, sehir, ilce, mahalle, acikAdres, toplamTutar, sepet, kuponKodu } = req.body;
+
+    try {
+        const pool = await poolPromise;
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+
+        try {
+            let requestAdres = new sql.Request(transaction);
+            let checkAdresRes = await requestAdres
+        .input('KullaniciID', sql.Int, kullaniciID)
+        .input('Sehir', sql.NVarChar, sehir)
+        .input('Ilce', sql.NVarChar, ilce)
+        .input('Mahalle', sql.NVarChar, mahalle || 'Belirtilmedi')
+        .input('AcikAdres', sql.NVarChar, acikAdres)
+        .query(`SELECT AdresID FROM Adres_Tablosu
+                WHERE KullaniciID = @KullaniciID AND Sehir = @Sehir AND Ilce = @Ilce
+                AND Mahalle = @Mahalle AND AcikAdres = @AcikAdres`);
+
+    let adresID;
+    if (checkAdresRes.recordset.length > 0) {
+        adresID = checkAdresRes.recordset[0].AdresID;
+    } else {
+        let insertAdres = new sql.Request(transaction);
+        let adresRes = await insertAdres
+            .input('KullaniciID', sql.Int, kullaniciID)
+            .input('Sehir', sql.NVarChar, sehir)
+            .input('Ilce', sql.NVarChar, ilce)
+            .input('Mahalle', sql.NVarChar, mahalle || 'Belirtilmedi')
+            .input('AcikAdres', sql.NVarChar, acikAdres)
+            .query(`INSERT INTO Adres_Tablosu (KullaniciID, Sehir, Ilce, Mahalle, AcikAdres)
+                    OUTPUT INSERTED.AdresID VALUES (@KullaniciID, @Sehir, @Ilce, @Mahalle, @AcikAdres)`);
+        adresID = adresRes.recordset[0].AdresID;
+    }
+
+            let requestSiparis = new sql.Request(transaction);
+            let siparisRes = await requestSiparis
+                .input('KullaniciID', sql.Int, kullaniciID)
+                .input('AdresID', sql.Int, adresID)
+                .input('PersonelID', sql.Int, 2)
+                .input('ToplamTutar', sql.Decimal(15,2), toplamTutar)
+                .input('SiparisDurumu', sql.NVarChar, 'Yeni')
+                .query(`INSERT INTO Siparisler (KullaniciID, AdresID, PersonelID, ToplamTutar, SiparisDurumu, SiparisTarihi)
+                        OUTPUT INSERTED.SiparisID VALUES (@KullaniciID, @AdresID, @PersonelID, @ToplamTutar, @SiparisDurumu, GETDATE())`);
+            let siparisID = siparisRes.recordset[0].SiparisID;
+
+            for (let urun of sepet) {
+                let requestStok = new sql.Request(transaction);
+
+                let stokKontrolRes = await requestStok
+                    .input('CheckParfumID', sql.Int, urun.id)
+                    .query('SELECT Kalan_Stok_ml, Ad FROM Parfumler WHERE ParfumID = @CheckParfumID');
+
+                let mevcutStok = stokKontrolRes.recordset[0].Kalan_Stok_ml;
+                let parfumAdi = stokKontrolRes.recordset[0].Ad;
+                let istenenMiktar = urun.ml * urun.adet;
+
+                if (mevcutStok < istenenMiktar) {
+                    throw new Error(`${parfumAdi} için yeterli stok bulunmuyor! (Mevcut: ${mevcutStok}ml)`);
+                }
+
+                let requestFiyat = new sql.Request(transaction);
+                let satisFiyatRes = await requestFiyat
+                    .input('ParfumID', sql.Int, urun.id)
+                    .input('Hacim', sql.Int, urun.ml)
+                    .query('SELECT SatisID FROM Parfum_Fiyatlari WHERE ParfumID = @ParfumID AND Hacim_ml = @Hacim');
+
+                let finalSatisID;
+                if (satisFiyatRes.recordset.length > 0) {
+                    finalSatisID = satisFiyatRes.recordset[0].SatisID;
+                } else {
+                    let requestInsertSatis = new sql.Request(transaction);
+                    let insertSatis = await requestInsertSatis
+                        .input('ParfumID2', sql.Int, urun.id)
+                        .input('Hacim2', sql.Int, urun.ml)
+                        .input('Fiyat2', sql.Decimal(10,2), urun.fiyat)
+                        .query(`INSERT INTO Parfum_Fiyatlari (ParfumID, Hacim_ml, SatisFiyati)
+                                OUTPUT INSERTED.SatisID VALUES (@ParfumID2, @Hacim2, @Fiyat2)`);
+                    finalSatisID = insertSatis.recordset[0].SatisID;
+                }
+
+                let requestDetay = new sql.Request(transaction);
+                await requestDetay
+                    .input('SiparisID', sql.Int, siparisID)
+                    .input('SatisID', sql.Int, finalSatisID)
+                    .input('Adet', sql.Int, urun.adet)
+                    .input('SatisFiyati', sql.Decimal(10,2), urun.fiyat)
+                    .input('Maliyet', sql.Decimal(10,2), 0)
+                    .query(`INSERT INTO Siparis_Detay (SiparisID, SatisID, Adet, SatisFiyati, SatisAnlikMaliyet)
+                            VALUES (@SiparisID, @SatisID, @Adet, @SatisFiyati, @Maliyet)`);
+
+                let requestUpdateStok = new sql.Request(transaction);
+                await requestUpdateStok
+                    .input('Dusulecek', sql.Int, (urun.ml * urun.adet))
+                    .input('ParfumID3', sql.Int, urun.id)
+                    .query(`UPDATE Parfumler SET Kalan_Stok_ml = Kalan_Stok_ml - @Dusulecek WHERE ParfumID = @ParfumID3`);
+            }
+
+            let requestOdeme = new sql.Request(transaction);
+            await requestOdeme
+                .input('SiparisID', sql.Int, siparisID)
+                .input('PayTR', sql.NVarChar, siparisNo)
+                .input('Komisyon', sql.Decimal(10,2), (toplamTutar * 0.02))
+                .input('Durum', sql.NVarChar, 'Başarılı')
+                .query(`INSERT INTO Odeme_Detay (SiparisID, PayTR_IslemNo, KomisyonKesinti, Durum)
+                        VALUES (@SiparisID, @PayTR, @Komisyon, @Durum)`);
+
+            if (kuponKodu) {
+                let requestKupon = new sql.Request(transaction);
+                await requestKupon
+                    .input('kod', sql.NVarChar, kuponKodu)
+                    .query(`UPDATE Kuponlar
+                            SET KullanilanMiktar = KullanilanMiktar + 1,
+                                Durum = CASE WHEN KullanilanMiktar + 1 >= KullanimSiniri THEN 'Kullanıldı' ELSE Durum END
+                            WHERE Kod = @kod`);
+            }
+
+            await transaction.commit();
+            res.status(200).json({ mesaj: "Siparişiniz başarıyla alındı!" });
+
+        } catch (innerErr) {
+            await transaction.rollback();
+            console.error("SQL Transaction Hatası:", innerErr);
+            res.status(500).json({ hata: "Sipariş işlenirken veritabanı hatası oluştu: " + innerErr.message });
+        }
+    } catch (err) {
+        console.error("Sunucu Bağlantı Hatası:", err);
+        res.status(500).json({ hata: "SQL Sunucusuna bağlanılamadı!" });
+    }
+},
+
+// ==========================================
+// 6. GEÇMİŞ SİPARİŞLERİM
+// ==========================================
+    siparislerim: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('id', sql.Int, req.params.kullaniciID)
+            .query(`
+                SELECT
+                    s.SiparisID,
+                    s.ToplamTutar,
+                    s.SiparisDurumu,
+                    s.SiparisTarihi,
+                    (
+                        SELECT STRING_AGG(p.Ad + ' (' + CAST(pf.Hacim_ml AS VARCHAR) + 'ml)', ', ')
+                        FROM Siparis_Detay sd
+                        INNER JOIN Parfum_Fiyatlari pf ON sd.SatisID = pf.SatisID
+                        INNER JOIN Parfumler p ON pf.ParfumID = p.ParfumID
+                        WHERE sd.SiparisID = s.SiparisID
+                    ) AS Urunler
+                FROM Siparisler s
+                WHERE s.KullaniciID = @id
+                ORDER BY s.SiparisTarihi DESC
+            `);
+
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        console.error("Siparişlerim Hatası DETAYLI:", err.message);
+        res.status(500).json({ hata: "Siparişler getirilemedi. Hata: " + err.message });
+    }
+},
+
+// ==========================================
+// 7. KAYITLI ADRESLERİM
+// ==========================================
+    adreslerim: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('id', sql.Int, req.params.kullaniciID)
+            .query(`
+                SELECT * FROM Adres_Tablosu
+                WHERE KullaniciID = @id
+                ORDER BY AdresID DESC
+            `);
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        console.error("Adreslerim Hatası:", err);
+        res.status(500).json({ hata: "Adresler getirilemedi!" });
+    }
+},
+
+// ==========================================
+// 8. E-POSTA İLE DOĞRULAMA KODU GÖNDER VE ŞİFRE SIFIRLA
+// ==========================================
+    sifreSifirla: async (req, res) => {
+    const { email } = req.body;
+
+    let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS
+        }
+    });
+
+    try {
+        const pool = await poolPromise;
+        const user = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query("SELECT AdSoyad FROM Kullanicilar WHERE Email = @email");
+
+        if (user.recordset.length > 0) {
+            const ad = user.recordset[0].AdSoyad;
+            const dogrulamaKodu = Math.floor(100000 + Math.random() * 900000).toString();
+
+            sifreSifirlamaKodlari[email] = {
+                kod: dogrulamaKodu,
+                zaman: Date.now() + 15 * 60 * 1000
+            };
+
+            let mailOptions = {
+                from: '"KareKoku Destek" <infokarekoku@gmail.com>',
+                to: email,
+                subject: 'Karekoku Şifre Sıfırlama Kodu',
+                html: `<h1>Merhaba ${ad},</h1>
+                       <p>Şifrenizi sıfırlamak için 6 haneli doğrulama kodunuz aşağıdadır:</p>
+                       <h2 style="color: #cca76a; font-size: 32px; letter-spacing: 5px;">${dogrulamaKodu}</h2>
+                       <p>Bu kod 15 dakika boyunca geçerlidir. Kodunuzu kimseyle paylaşmayın.</p>`
+            };
+
+            await transporter.sendMail(mailOptions);
+            res.json({ mesaj: "Doğrulama kodu e-posta adresinize gönderildi!" });
+        } else {
+            res.status(404).json({ hata: "Bu e-posta adresi sistemde kayıtlı değil!" });
+        }
+    } catch (err) {
+        console.error("E-posta Gönderme Hatası:", err);
+        res.status(500).json({ hata: "İşlem sırasında hata oluştu!" });
+    }
+},
+
+    sifreYeniBelirle: async (req, res) => {
+    const { email, kod, yeniSifre } = req.body;
+
+    if (!sifreSifirlamaKodlari[email]) {
+        return res.status(400).json({ hata: "Geçersiz veya süresi dolmuş kod işlemi!" });
+    }
+
+    if (sifreSifirlamaKodlari[email].zaman < Date.now()) {
+        delete sifreSifirlamaKodlari[email];
+        return res.status(400).json({ hata: "Kodun süresi dolmuş. Lütfen tekrar kod isteyin." });
+    }
+
+    if (sifreSifirlamaKodlari[email].kod !== kod) {
+        return res.status(400).json({ hata: "Hatalı doğrulama kodu girdiniz!" });
+    }
+
+    try {
+        const hashedSifre = await bcrypt.hash(yeniSifre, 10);
+        const pool = await poolPromise;
+        await pool.request()
+            .input('email', sql.NVarChar, email)
+            .input('yeniSifre', sql.NVarChar, hashedSifre)
+            .query("UPDATE Kullanicilar SET Sifre = @yeniSifre WHERE Email = @email");
+
+        delete sifreSifirlamaKodlari[email];
+        res.status(200).json({ mesaj: "Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz." });
+    } catch (err) {
+        console.error("Şifre güncelleme hatası:", err);
+        res.status(500).json({ hata: "Veritabanı hatası oluştu!" });
+    }
+},
+
+// ==========================================
+// 9. KULLANICI ŞİFRE DEĞİŞTİRME
+// ==========================================
+    sifreDegistir: async (req, res) => {
+    const { kullaniciID, eskiSifre, yeniSifre } = req.body;
+
+    if (!kullaniciID || !eskiSifre || !yeniSifre) {
+        return res.status(400).json({ hata: "Lütfen eski ve yeni şifrenizi girin!" });
+    }
+
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('id', sql.Int, kullaniciID)
+            .query('SELECT Sifre FROM Kullanicilar WHERE KullaniciID = @id');
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ hata: "Kullanıcı bulunamadı!" });
+        }
+
+        const user = result.recordset[0];
+        const isMatch = await bcrypt.compare(eskiSifre, user.Sifre);
+
+        if (!isMatch) {
+            return res.status(401).json({ hata: "Mevcut şifrenizi yanlış girdiniz!" });
+        }
+
+        const hashedYeniSifre = await bcrypt.hash(yeniSifre, 10);
+        await pool.request()
+            .input('id', sql.Int, kullaniciID)
+            .input('yeniSifre', sql.NVarChar, hashedYeniSifre)
+            .query('UPDATE Kullanicilar SET Sifre = @yeniSifre WHERE KullaniciID = @id');
+
+        res.status(200).json({ mesaj: "Şifreniz başarıyla güncellendi!" });
+
+    } catch (err) {
+        console.error("Şifre Değiştirme Hatası:", err);
+        res.status(500).json({ hata: "Veritabanı hatası!" });
+    }
+},
+
+// ==========================================
+// 10. YENİ ADRES EKLEME
+// ==========================================
+    adresEkle: async (req, res) => {
+    const kullaniciID = req.user.id;
+    const { baslik, telefon, il, ilce, acikAdres } = req.body;
+
+    if (!kullaniciID || !il || !ilce || !acikAdres) {
+        return res.status(400).json({ hata: "Lütfen İl, İlçe ve Açık Adres alanlarını doldurun!" });
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        const checkAdres = await pool.request()
+            .input('KullaniciID', sql.Int, kullaniciID)
+            .input('Sehir', sql.NVarChar, il)
+            .input('Ilce', sql.NVarChar, ilce)
+            .input('AcikAdres', sql.NVarChar, acikAdres)
+            .query(`SELECT AdresID FROM Adres_Tablosu
+                    WHERE KullaniciID = @KullaniciID
+                    AND Sehir = @Sehir
+                    AND Ilce = @Ilce
+                    AND AcikAdres = @AcikAdres`);
+
+        if (checkAdres.recordset.length > 0) {
+            return res.status(400).json({ hata: "Bu adres zaten kayıtlı! Aynı adresi tekrar ekleyemezsiniz." });
+        }
+
+        await pool.request()
+            .input('KullaniciID', sql.Int, kullaniciID)
+            .input('AdresBasligi', sql.NVarChar, baslik || 'Ev')
+            .input('Telefon', sql.NVarChar, telefon || '')
+            .input('Sehir', sql.NVarChar, il)
+            .input('Ilce', sql.NVarChar, ilce)
+            .input('Mahalle', sql.NVarChar, 'Belirtilmedi')
+            .input('AcikAdres', sql.NVarChar, acikAdres)
+            .query(`INSERT INTO Adres_Tablosu (KullaniciID, AdresBasligi, Telefon, Sehir, Ilce, Mahalle, AcikAdres)
+                    VALUES (@KullaniciID, @AdresBasligi, @Telefon, @Sehir, @Ilce, @Mahalle, @AcikAdres)`);
+
+        res.status(200).json({ mesaj: "Yeni adresiniz başarıyla kaydedildi!" });
+    } catch (err) {
+        console.error("Adres Ekleme SQL Hatası:", err.message);
+        res.status(500).json({ hata: "Veritabanı Hatası: " + err.message });
+    }
+},
+
+// ==========================================
+// 11. ADRES SİLME
+// ==========================================
+    adresSil: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const checkSiparis = await pool.request()
+            .input('id', sql.Int, req.params.adresID)
+            .query("SELECT SiparisID FROM Siparisler WHERE AdresID = @id");
+
+        if (checkSiparis.recordset.length > 0) {
+             return res.status(400).json({ hata: "Bu adrese ait geçmiş siparişleriniz var. Adres silinemez!" });
+        }
+
+        await pool.request()
+            .input('id', sql.Int, req.params.adresID)
+            .query("DELETE FROM Adres_Tablosu WHERE AdresID = @id");
+
+        res.status(200).json({ mesaj: "Adres başarıyla silindi!" });
+    } catch (err) {
+        console.error("Adres Silme Hatası:", err);
+        res.status(500).json({ hata: "Veritabanı silme hatası!" });
+    }
+},
+
+// ==========================================
+// 12. PARFÜM YORUMLARINI GETİR (GET)
+// ==========================================
+    getYorumlar: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('parfumID', sql.Int, req.params.parfumID)
+            .query(`
+                SELECT y.YorumID, y.YorumMetni, y.Tarih, y.Puan, k.AdSoyad
+                FROM Yorumlar y
+                INNER JOIN Kullanicilar k ON y.KullaniciID = k.KullaniciID
+                WHERE y.ParfumID = @parfumID
+                ORDER BY y.Tarih DESC
+            `);
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        console.error("Yorum Çekme Hatası:", err.message);
+        res.status(500).json({ hata: "Yorumlar yüklenirken hata oluştu!" });
+    }
+},
+
+// ==========================================
+// 13. YENİ YORUM EKLE (POST)
+// ==========================================
+    yorumEkle: async (req, res) => {
+    const { parfumID, kullaniciID, yorumMetni, puan } = req.body;
+
+    if (!parfumID || !kullaniciID || !yorumMetni) {
+        return res.status(400).json({ hata: "Yorum alanı boş bırakılamaz!" });
+    }
+
+    try {
+        const pool = await poolPromise;
+        await pool.request()
+            .input('parfumID', sql.Int, parfumID)
+            .input('kullaniciID', sql.Int, kullaniciID)
+            .input('yorumMetni', sql.NVarChar, yorumMetni)
+            .input('puan', sql.Int, puan || 5)
+            .query(`INSERT INTO Yorumlar (ParfumID, KullaniciID, YorumMetni, Puan, Tarih)
+                    VALUES (@parfumID, @kullaniciID, @yorumMetni, @puan, GETDATE())`);
+
+        res.status(200).json({ mesaj: "Yorumunuz başarıyla gönderildi!" });
+    } catch (err) {
+        console.error("Yorum Ekleme Hatası:", err.message);
+        res.status(500).json({ hata: "Yorum kaydedilirken veritabanı hatası oluştu!" });
+    }
+},
+
+// ==========================================
+// 14. ADMIN: TÜM SİPARİŞLERİ GETİR (Süper Güvenli Form)
+// ==========================================
+    adminSiparisler: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        // 🚨 JOIN kullanmadan, verileri doğrudan alt sorguyla çekiyoruz. Müşteri silinse bile patlamaz!
+        const result = await pool.request().query(`
+            SELECT
+                s.SiparisID,
+                ISNULL((SELECT TOP 1 k.AdSoyad FROM Kullanicilar k WHERE k.KullaniciID = s.KullaniciID), 'Bilinmeyen Müşteri') AS AdSoyad,
+                ISNULL(s.ToplamTutar, 0) AS ToplamTutar,
+                ISNULL(s.SiparisDurumu, 'Yeni') AS SiparisDurumu,
+                ISNULL(s.SiparisTarihi, GETDATE()) AS SiparisTarihi
+            FROM Siparisler s
+            ORDER BY s.SiparisTarihi DESC
+        `);
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        console.error("🚨 Admin Sipariş Hatası:", err.message);
+        res.status(500).json({ hata: "Siparişler çekilirken SQL hatası: " + err.message });
+    }
+},
+
+// ==========================================
+// 15. ADMIN: FİNANS VE ÖZET BİLGİLER
+// ==========================================
+    adminOzet: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const gelirResult = await pool.request().query("SELECT ISNULL(SUM(ToplamTutar), 0) as ToplamGelir FROM Siparisler WHERE SiparisDurumu != 'İptal'");
+        const bekleyenResult = await pool.request().query("SELECT COUNT(SiparisID) as Bekleyen FROM Siparisler WHERE SiparisDurumu IN ('Yeni', 'Hazırlanıyor')");
+
+        res.status(200).json({
+            ToplamGelir: gelirResult.recordset[0].ToplamGelir,
+            BekleyenSiparis: bekleyenResult.recordset[0].Bekleyen,
+            KritikStok: 3
+        });
+    } catch (err) {
+        console.error("🚨 Admin Özet Hatası:", err.message);
+        res.status(500).json({ hata: "Özet çekilemedi: " + err.message });
+    }
+},
+
+// ==========================================
+// 16. ADMIN: STOK DURUMU
+// ==========================================
+    adminStok: async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request().query(`SELECT ParfumID, Marka, Ad FROM Parfumler ORDER BY Marka ASC`);
+        res.status(200).json(result.recordset);
+    } catch (err) {
+        res.status(500).json({ hata: "Stok çekilemedi" });
+    }
+},
+
+// ==========================================
+// 17. ADMIN: SİPARİŞ DURUMU GÜNCELLEME
+// ==========================================
+    adminSiparisGuncelle: async (req, res) => {
+    const { siparisID, yeniDurum } = req.body;
+    try {
+        const pool = await poolPromise;
+        await pool.request()
+            .input('id', sql.Int, siparisID)
+            .input('durum', sql.NVarChar, yeniDurum)
+            .query("UPDATE Siparisler SET SiparisDurumu = @durum WHERE SiparisID = @id");
+        res.status(200).json({ mesaj: "Güncellendi" });
+    } catch (err) {
+        res.status(500).json({ hata: "Güncelleme başarısız" });
+    }
+}
+
+};
+
+module.exports = apiController;

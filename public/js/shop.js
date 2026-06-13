@@ -98,6 +98,20 @@ window.vitriniDoldur = async function() {
             markaContainer.innerHTML = '';
             uniqueBrands.forEach(m => { markaContainer.innerHTML += `<label class="custom-cb"><input type="checkbox" value="${m.toLowerCase()}" onchange="filtreleriUygula()"> ${m}</label>`; });
         }
+
+        let allNotes = [];
+        KareState.db.forEach(p => {
+            const notesArray = p.notalar.split(',').map(n => n.trim().toLowerCase()).filter(n => n);
+            allNotes = allNotes.concat(notesArray);
+        });
+        const uniqueNotes = [...new Set(allNotes)].sort();
+        const notaContainer = document.getElementById('notaFiltreleri');
+        if (notaContainer) {
+            notaContainer.innerHTML = '';
+            uniqueNotes.forEach(n => {
+                if(n.length > 2) notaContainer.innerHTML += `<label class="custom-cb"><input type="checkbox" value="${n}" onchange="filtreleriUygula()"> ${n.charAt(0).toUpperCase() + n.slice(1)}</label>`;
+            });
+        }
         renderProducts(KareState.db);
     } catch (err) { 
         console.error("Vitrin yüklenemedi:", err); 
@@ -119,8 +133,10 @@ window.renderProducts = function(liste) {
         let ilkFiyat = p.v[Object.keys(p.v)[0]];
         let themeClass = p.kategori === 'designer' ? 'designer' : 'nis';
 
+        let isFav = KareState.favoriler && KareState.favoriler.includes(p.id) ? '❤️' : '🤍';
         grid.insertAdjacentHTML('beforeend', `
-            <div class="card ${themeClass}" style="animation-delay: ${index * 0.05}s;">
+            <div class="card ${themeClass}" style="animation-delay: ${index * 0.05}s; position: relative;">
+                <div class="fav-icon" onclick="toggleFavori('${p.id}')" id="fav-${p.id}" style="position: absolute; top: 10px; right: 10px; font-size: 24px; cursor: pointer; z-index: 10; text-shadow: 0 0 5px rgba(0,0,0,0.5);">${isFav}</div>
                 <img src="${p.gorsel}" loading="lazy" onclick="openUrunSayfasi('${p.id}')" onerror="this.src='${KareState.fallbackImg}'" style="cursor: pointer;">
                 
                 <div class="brand">${p.marka}</div>
@@ -151,6 +167,7 @@ window.filtreleriUygula = function () {
     const seciliKategoriler = Array.from(document.querySelectorAll('#kategoriFiltreleri input:checked')).map(cb => cb.value);
     const seciliCinsiyetler = Array.from(document.querySelectorAll('#cinsiyetFiltreleri input:checked')).map(cb => cb.value);
     const seciliKokular = Array.from(document.querySelectorAll('#kokuFiltreleri input:checked')).map(cb => cb.value);
+    const seciliNotalar = Array.from(document.querySelectorAll('#notaFiltreleri input:checked')).map(cb => cb.value);
 
     const filtrelenmis = KareState.db.filter(p => {
         const aramayaUyar = aranan === "" || p.ad.toLowerCase().includes(aranan) || p.marka.toLowerCase().includes(aranan) || p.notalar.toLowerCase().includes(aranan);
@@ -160,7 +177,8 @@ window.filtreleriUygula = function () {
         const kategoriyeUyar = seciliKategoriler.length === 0 || seciliKategoriler.includes(p.kategori);
         const cinsiyeteUyar = seciliCinsiyetler.length === 0 || seciliCinsiyetler.includes(p.cinsiyet);
         const kokuyaUyar = seciliKokular.length === 0 || seciliKokular.includes(p.koku);
-        return aramayaUyar && anaKategoriUyar && anaCinsiyetUyar && markayaUyar && kategoriyeUyar && cinsiyeteUyar && kokuyaUyar;
+        const notayaUyar = seciliNotalar.length === 0 || seciliNotalar.some(sn => p.notalar.toLowerCase().includes(sn));
+        return aramayaUyar && anaKategoriUyar && anaCinsiyetUyar && markayaUyar && kategoriyeUyar && cinsiyeteUyar && kokuyaUyar && notayaUyar;
     });
     renderProducts(filtrelenmis);
     renderActiveFilters();
@@ -239,4 +257,38 @@ window.hizliKategoriSec = function(deger) {
     if(hedefCb) hedefCb.checked = true;
     document.querySelector('.shop-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
     if(typeof filtreleriUygula === 'function') filtreleriUygula();
+};
+
+window.toggleFavori = async function(parfumID) {
+    if (!KareState.aktifKullaniciID) {
+        showToast("Favorilere eklemek için giriş yapmalısınız!", true);
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${KareState.API_URL}/api/favoriler`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kullaniciID: KareState.aktifKullaniciID, parfumID: parseInt(parfumID) })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const icon = document.getElementById(`fav-${parfumID}`);
+            
+            if (data.isFavorite) {
+                if (!KareState.favoriler.includes(parseInt(parfumID))) KareState.favoriler.push(parseInt(parfumID));
+                if (icon) icon.innerText = '❤️';
+                showToast("Favorilere eklendi!");
+            } else {
+                KareState.favoriler = KareState.favoriler.filter(id => id !== parseInt(parfumID));
+                if (icon) icon.innerText = '🤍';
+                showToast("Favorilerden çıkarıldı!");
+            }
+            // Update the wishlist tab if open
+            if(typeof window.renderFavoriler === 'function') window.renderFavoriler();
+        }
+    } catch (err) {
+        showToast("Sunucuya ulaşılamadı!", true);
+    }
 };

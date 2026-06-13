@@ -5,6 +5,7 @@ window.apiFetch = async function(url, options = {}) {
     if (token) {
         options.headers['Authorization'] = 'Bearer ' + token;
     }
+    options.headers['ngrok-skip-browser-warning'] = '69420';
     options.credentials = 'include';
     return fetch(url, options);
 };

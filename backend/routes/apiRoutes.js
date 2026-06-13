@@ -19,14 +19,33 @@ app.post('/api/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(sifre, 10);
 
+        const onayKodu = Math.floor(100000 + Math.random() * 900000).toString();
+
         await pool.request()
             .input('adSoyad', sql.NVarChar, adSoyad)
             .input('email', sql.NVarChar, email)
             .input('telefon', sql.NVarChar, telefon || null)
             .input('sifre', sql.NVarChar, hashedPassword)
-            .query('INSERT INTO Kullanicilar (AdSoyad, Email, Telefon, Sifre) VALUES (@adSoyad, @email, @telefon, @sifre)');
+            .input('onayKodu', sql.NVarChar, onayKodu)
+            .query('INSERT INTO Kullanicilar (AdSoyad, Email, Telefon, Sifre, MailOnayliMi, OnayKodu) VALUES (@adSoyad, @email, @telefon, @sifre, 0, @onayKodu)');
 
-        res.status(200).json({ mesaj: "Kayıt başarıyla oluşturuldu! Giriş yapabilirsiniz." });
+        let transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        });
+        
+        let mailOptions = {
+            from: '"KareKoku Destek" <infokarekoku@gmail.com>',
+            to: email,
+            subject: 'Karekoku Üyelik Onay Kodu',
+            html: `<h1>Merhaba ${adSoyad},</h1>
+                   <p>Aramıza hoş geldiniz! Hesabınızı aktifleştirmek için onay kodunuz:</p>
+                   <h2 style="color: #cca76a; font-size: 32px; letter-spacing: 5px;">${onayKodu}</h2>
+                   <p>Bu kodu ekrandaki kutucuğa girerek alışverişe başlayabilirsiniz.</p>`
+        };
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ mesaj: "Kayıt başarılı! Lütfen e-postanıza gelen onay kodunu girin.", requireOtp: true, tempEmail: email });
     } catch (err) {
         console.error("Kayıt Hatası:", err);
         res.status(500).json({ hata: "Veritabanı hatası!" });
@@ -50,9 +69,12 @@ app.post('/api/login', async (req, res) => {
             const user = result.recordset[0];
             const isMatch = await bcrypt.compare(sifre, user.Sifre);
             if (isMatch) {
+                if (user.MailOnayliMi === false || user.MailOnayliMi === 0) {
+                    return res.status(403).json({ hata: "Hesabınız henüz onaylanmamış! Lütfen e-posta adresinizi doğrulayın.", requireOtp: true, tempEmail: user.Email });
+                }
                 const token = jwt.sign({ id: user.KullaniciID, email: user.Email, rol: user.Yetki || 'User' }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('kareToken', token, { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    res.status(200).json({ mesaj: "Giriş başarılı", kullanici: user.AdSoyad, id: user.KullaniciID, token: token });
+                res.cookie('kareToken', token, { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 });
+                res.status(200).json({ mesaj: "Giriş başarılı", kullanici: user.AdSoyad, id: user.KullaniciID, token: token, rol: user.Yetki || 'User' });
             } else {
                 res.status(401).json({ hata: "E-posta veya şifre hatalı!" });
             }
@@ -62,6 +84,78 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error("Giriş Hatası:", err);
         res.status(500).json({ hata: "Veritabanı hatası!" });
+    }
+});
+
+// ==========================================
+// 2.1 OTP DOĞRULAMA & YENİDEN GÖNDERME
+// ==========================================
+app.post('/api/verify-register-otp', async (req, res) => {
+    const { email, kod } = req.body;
+    if (!email || !kod) return res.status(400).json({ hata: "Bilgiler eksik!" });
+
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT OnayKodu FROM Kullanicilar WHERE Email = @email');
+
+        if (result.recordset.length === 0) return res.status(404).json({ hata: "Kullanıcı bulunamadı!" });
+
+        if (result.recordset[0].OnayKodu === kod) {
+            await pool.request()
+                .input('email', sql.NVarChar, email)
+                .query('UPDATE Kullanicilar SET MailOnayliMi = 1, OnayKodu = NULL WHERE Email = @email');
+            res.status(200).json({ mesaj: "Hesabınız başarıyla onaylandı!" });
+        } else {
+            res.status(400).json({ hata: "Hatalı doğrulama kodu!" });
+        }
+    } catch (err) {
+        console.error("OTP Doğrulama Hatası:", err);
+        res.status(500).json({ hata: "Sunucu hatası!" });
+    }
+});
+
+app.post('/api/resend-register-otp', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ hata: "E-posta eksik!" });
+
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT AdSoyad, MailOnayliMi FROM Kullanicilar WHERE Email = @email');
+
+        if (result.recordset.length === 0) return res.status(404).json({ hata: "Kullanıcı bulunamadı!" });
+        if (result.recordset[0].MailOnayliMi) return res.status(400).json({ hata: "Hesabınız zaten onaylı!" });
+
+        const adSoyad = result.recordset[0].AdSoyad;
+        const onayKodu = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await pool.request()
+            .input('email', sql.NVarChar, email)
+            .input('kod', sql.NVarChar, onayKodu)
+            .query('UPDATE Kullanicilar SET OnayKodu = @kod WHERE Email = @email');
+
+        let transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        });
+        
+        let mailOptions = {
+            from: '"KareKoku Destek" <infokarekoku@gmail.com>',
+            to: email,
+            subject: 'Karekoku Üyelik Onay Kodu (Yeni)',
+            html: `<h1>Merhaba ${adSoyad},</h1>
+                   <p>Yeni onay kodunuz aşağıdadır:</p>
+                   <h2 style="color: #cca76a; font-size: 32px; letter-spacing: 5px;">${onayKodu}</h2>`
+        };
+        await transporter.sendMail(mailOptions);
+        
+        res.status(200).json({ mesaj: "Yeni doğrulama kodu e-posta adresinize gönderildi!" });
+    } catch (err) {
+        console.error("OTP Yeniden Gönderme Hatası:", err);
+        res.status(500).json({ hata: "Sunucu hatası!" });
     }
 });
 
@@ -618,6 +712,77 @@ app.post('/api/admin/siparis-guncelle', async (req, res) => {
         res.status(200).json({ mesaj: "Güncellendi" });
     } catch (err) {
         res.status(500).json({ hata: "Güncelleme başarısız" });
+    }
+});
+
+// ==========================================
+// 18. FAVORİLER (WISHLIST)
+// ==========================================
+app.get('/api/favoriler/:id', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('kid', sql.Int, req.params.id)
+            .query("SELECT ParfumID FROM Favoriler WHERE KullaniciID = @kid");
+        const list = result.recordset.map(x => x.ParfumID);
+        res.status(200).json(list);
+    } catch (err) {
+        res.status(500).json({ hata: "Favoriler çekilemedi" });
+    }
+});
+
+app.post('/api/favoriler', async (req, res) => {
+    const { kullaniciID, parfumID } = req.body;
+    try {
+        const pool = await poolPromise;
+        const check = await pool.request()
+            .input('kid', sql.Int, kullaniciID)
+            .input('pid', sql.Int, parfumID)
+            .query("SELECT * FROM Favoriler WHERE KullaniciID = @kid AND ParfumID = @pid");
+        
+        if (check.recordset.length > 0) {
+            await pool.request()
+                .input('kid', sql.Int, kullaniciID)
+                .input('pid', sql.Int, parfumID)
+                .query("DELETE FROM Favoriler WHERE KullaniciID = @kid AND ParfumID = @pid");
+            res.status(200).json({ isFavorite: false });
+        } else {
+            await pool.request()
+                .input('kid', sql.Int, kullaniciID)
+                .input('pid', sql.Int, parfumID)
+                .query("INSERT INTO Favoriler (KullaniciID, ParfumID) VALUES (@kid, @pid)");
+            res.status(200).json({ isFavorite: true });
+        }
+    } catch (err) {
+        res.status(500).json({ hata: "Favori işlemi başarısız" });
+    }
+});
+
+// ==========================================
+// 19. STOK BİLDİRİMİ (GELİNCE HABER VER)
+// ==========================================
+app.post('/api/stok-bildirim', async (req, res) => {
+    const { kullaniciID, email, parfumID } = req.body;
+    try {
+        const pool = await poolPromise;
+        const check = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .input('pid', sql.Int, parfumID)
+            .query("SELECT * FROM StokBildirimleri WHERE Email = @email AND ParfumID = @pid AND BildirildiMi = 0");
+            
+        if (check.recordset.length > 0) {
+            return res.status(400).json({ hata: "Bu parfüm için zaten bir talebiniz var!" });
+        }
+
+        await pool.request()
+            .input('kid', sql.Int, kullaniciID || null)
+            .input('email', sql.NVarChar, email)
+            .input('pid', sql.Int, parfumID)
+            .query("INSERT INTO StokBildirimleri (KullaniciID, Email, ParfumID) VALUES (@kid, @email, @pid)");
+            
+        res.status(200).json({ mesaj: "Talebiniz alındı! Stok yenilendiğinde size e-posta ile haber vereceğiz." });
+    } catch (err) {
+        res.status(500).json({ hata: "Talep oluşturulamadı" });
     }
 });
 

@@ -3,6 +3,14 @@ window.openCheckout = function() {
     if (!KareState.sepet || KareState.sepet.length === 0) { showToast("Sepetiniz boş, lütfen önce ürün ekleyin!", true); return; }
     if (!KareState.aktifKullanici) { showToast("Sipariş verebilmek için lütfen önce giriş yapın!", true); closeAllDrawers(); toggleLogin(); return; }
 
+    // E-Posta Doğrulama Kontrolü (SOFT LOCK)
+    if (KareState.aktifKullaniciMailOnayliMi === false || KareState.aktifKullaniciMailOnayliMi === "false") {
+        closeAllDrawers();
+        document.getElementById('emailVerifyOverlay').style.display = 'flex';
+        if(document.getElementById('verifyCodeInput')) document.getElementById('verifyCodeInput').value = '';
+        return; // Ödeme ekranını açma, doğrulamayı bekle
+    }
+
     // 🌟 ÖN YÜZ GÜMRÜK KONTROLÜ: Ödeme ekranı açılmadan önce sepetteki her şeyi canlı stokla eşleştiriyoruz
     for (let item of KareState.sepet) {
         const p = KareState.db.find(x => String(x.id) === String(item.id));
@@ -284,12 +292,54 @@ window.finishOrder = function() {
 // --- HESABIM SEKMELERİ VE SQL BAĞLANTILARI ---
 window.hesapTabGoster = function(tabAdi, event) {
     document.getElementById('tab-siparisler').style.display = 'none';
+    if(document.getElementById('tab-favorilerim')) document.getElementById('tab-favorilerim').style.display = 'none';
     document.getElementById('tab-adreslerim').style.display = 'none';
     document.getElementById('tab-kartlarim').style.display = 'none';
     document.getElementById('tab-guvenlik').style.display = 'none';
+    
     document.getElementById('tab-' + tabAdi).style.display = 'block';
     document.querySelectorAll('.account-menu-item').forEach(el => el.classList.remove('active'));
     if(event) event.currentTarget.classList.add('active');
+    
+    if (tabAdi === 'favorilerim' && typeof window.renderFavoriler === 'function') {
+        window.renderFavoriler();
+    }
+};
+
+window.renderFavoriler = function() {
+    const grid = document.getElementById('favorilerGrid');
+    if(!grid) return;
+    
+    if(!KareState.favoriler || KareState.favoriler.length === 0) {
+        grid.innerHTML = '<p style="color: var(--muted); grid-column: 1/-1;">Favori listeniz henüz boş.</p>';
+        return;
+    }
+    
+    const favoriUrunler = KareState.db.filter(p => KareState.favoriler.includes(parseInt(p.id)));
+    if(favoriUrunler.length === 0) {
+        grid.innerHTML = '<p style="color: var(--muted); grid-column: 1/-1;">Favori listeniz henüz boş.</p>';
+        return;
+    }
+    
+    grid.innerHTML = '';
+    favoriUrunler.forEach((p, index) => {
+        let options = ''; for (let ml in p.v) options += `<option value="${ml}">${ml} ml</option>`;
+        let ilkFiyat = p.v[Object.keys(p.v)[0]];
+        let themeClass = p.kategori === 'designer' ? 'designer' : 'nis';
+
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="card ${themeClass}" style="animation-delay: ${index * 0.05}s; position: relative;">
+                <div class="fav-icon" onclick="toggleFavori('${p.id}')" id="fav-acc-${p.id}" style="position: absolute; top: 10px; right: 10px; font-size: 24px; cursor: pointer; z-index: 10; text-shadow: 0 0 5px rgba(0,0,0,0.5);">❤️</div>
+                <img src="${p.gorsel}" loading="lazy" onclick="openUrunSayfasi('${p.id}')" onerror="this.src='${KareState.fallbackImg}'" style="cursor: pointer;">
+                <div class="brand">${p.marka}</div>
+                <div class="title">${p.ad}</div>
+                <select class="vol-select" id="vol-acc-${p.id}" onchange="document.getElementById('price-acc-${p.id}').innerText = formatTL(${p.v}[this.value])">${options}</select>
+                <div class="card-bottom">
+                    <div class="price" id="price-acc-${p.id}">${formatTL(ilkFiyat)}</div>
+                    <button class="add-btn" onclick="sepeteEkle('${p.id}')">Sepete Ekle</button>
+                </div>
+            </div>`);
+    });
 };
 
 window.siparisleriGetir = async function() {
@@ -298,7 +348,7 @@ window.siparisleriGetir = async function() {
     container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--muted);">⏳ Siparişleriniz SQL Veritabanından Çekiliyor...</td></tr>';
     
     try {
-        const response = await apiFetch(`${KareState.API_URL}/api/siparislerim`, { credentials: 'include' });
+        const response = await apiFetch(`${KareState.API_URL}/api/siparislerim/${KareState.aktifKullaniciID}`, { credentials: 'include' });
         
         if (!response.ok) {
             const errData = await response.json();
@@ -355,7 +405,7 @@ window.adresleriGetir = async function() {
     container.innerHTML = '<p style="color:var(--muted); text-align:center;">Adresleriniz SQL Veritabanından çekiliyor...</p>';
     
     try {
-        const response = await apiFetch(`${KareState.API_URL}/api/adreslerim`, { credentials: 'include' });
+        const response = await apiFetch(`${KareState.API_URL}/api/adreslerim/${KareState.aktifKullaniciID}`, { credentials: 'include' });
         if (!response.ok) throw new Error("API Hatası");
         
         const adresler = await response.json();
@@ -407,7 +457,13 @@ window.kartlariGetir = function() {
     const container = document.getElementById('kartListesiContainer');
     if(!container) return;
     
-    let kartlar = JSON.parse(localStorage.getItem('kareKartlar')) || [];
+    let kartlar = [];
+    try {
+        kartlar = JSON.parse(localStorage.getItem('kareKartlar')) || [];
+    } catch (e) {
+        kartlar = [];
+        localStorage.removeItem('kareKartlar');
+    }
     
     if(kartlar.length === 0) {
         container.innerHTML = '<p style="color: var(--muted); font-size: 13px; margin-top:10px;">Kayıtlı kartınız bulunmuyor.</p>';

@@ -22,14 +22,47 @@ window.openUrunSayfasi = function(id) {
     for (let ml in p.v) options += `<option value="${ml}">${ml} ml - ${formatTL(p.v[ml])}</option>`;
     
     const volSelect = document.getElementById('pdpVolSelect');
-    if(volSelect) {
-        volSelect.innerHTML = options;
-        volSelect.onchange = function() {
-            let seciliFiyat = p.v[this.value];
-            if(document.getElementById('pdpFiyat')) document.getElementById('pdpFiyat').innerText = formatTL(seciliFiyat);
-            if(document.getElementById('stickyFiyat')) document.getElementById('stickyFiyat').innerText = formatTL(seciliFiyat);
-        };
-        volSelect.onchange();
+    const mainBtn = document.getElementById('pdpMainBtn');
+    const stickyBtn = document.getElementById('stickyMainBtn');
+
+    if(p.kalanStok <= 0) {
+        if(volSelect) volSelect.innerHTML = `<option value="">Tükendi</option>`;
+        if(mainBtn) {
+            mainBtn.innerText = "GELİNCE HABER VER";
+            mainBtn.onclick = () => stokBildirimTalebi(p.id);
+            mainBtn.style.background = "#000"; 
+            mainBtn.style.color = "var(--active-theme)";
+        }
+        if(stickyBtn) {
+            stickyBtn.innerText = "GELİNCE HABER VER";
+            stickyBtn.onclick = () => stokBildirimTalebi(p.id);
+            stickyBtn.style.background = "#000";
+            stickyBtn.style.color = "var(--active-theme)";
+        }
+        if(document.getElementById('pdpFiyat')) document.getElementById('pdpFiyat').innerText = "Stokta Yok";
+        if(document.getElementById('stickyFiyat')) document.getElementById('stickyFiyat').innerText = "Stokta Yok";
+    } else {
+        if(volSelect) {
+            volSelect.innerHTML = options;
+            volSelect.onchange = function() {
+                let seciliFiyat = p.v[this.value];
+                if(document.getElementById('pdpFiyat')) document.getElementById('pdpFiyat').innerText = formatTL(seciliFiyat);
+                if(document.getElementById('stickyFiyat')) document.getElementById('stickyFiyat').innerText = formatTL(seciliFiyat);
+            };
+            volSelect.onchange();
+        }
+        if(mainBtn) {
+            mainBtn.innerText = "SEPETE EKLE";
+            mainBtn.onclick = pdpSepeteEkle;
+            mainBtn.style.background = ""; 
+            mainBtn.style.color = "";
+        }
+        if(stickyBtn) {
+            stickyBtn.innerText = "SEPETE EKLE";
+            stickyBtn.onclick = pdpSepeteEkle;
+            stickyBtn.style.background = "";
+            stickyBtn.style.color = "";
+        }
     }
 
     const pdpOnerilenler = document.getElementById('pdpOnerilenler');
@@ -250,3 +283,31 @@ window.hesabiSil = async function() {
     }
 };
 window.toggleMobileSidebar = function() { const sidebar = document.querySelector('.shop-sidebar'); const overlay = document.getElementById('sidebarOverlay'); if(sidebar) sidebar.classList.toggle('open'); if(overlay) overlay.classList.toggle('active'); };
+
+window.stokBildirimTalebi = async function(parfumID) {
+    let email = KareState.aktifKullaniciEmail;
+    if(!email) {
+        email = prompt("Stok yenilendiğinde haber verebilmemiz için lütfen e-posta adresinizi girin:");
+        if(!email || !email.includes('@')) {
+            showToast("Geçerli bir e-posta adresi girmelisiniz!", true);
+            return;
+        }
+    }
+    
+    try {
+        const response = await apiFetch(`${KareState.API_URL}/api/stok-bildirim`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kullaniciID: KareState.aktifKullaniciID, email: email, parfumID: parseInt(parfumID) })
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast("✅ " + data.mesaj);
+        } else {
+            showToast("❌ " + (data.hata || data.mesaj), true);
+        }
+    } catch(err) {
+        showToast("Sunucuya ulaşılamadı!", true);
+    }
+};
