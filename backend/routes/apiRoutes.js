@@ -1,4 +1,4 @@
-module.exports = function(app, sql, poolPromise, bcrypt, jwt, JWT_SECRET, nodemailer, verifyToken) {
+module.exports = function(app, sql, poolPromise, bcrypt, jwt, JWT_SECRET, nodemailer, verifyToken, isAdmin) {
 // 1. KULLANICI KAYDI (REGISTER)
 // ==========================================
 app.post('/api/register', async (req, res) => {
@@ -644,7 +644,7 @@ app.post('/api/yorum-ekle', async (req, res) => {
 // ==========================================
 // 14. ADMIN: TÜM SİPARİŞLERİ GETİR (Süper Güvenli Form)
 // ==========================================
-app.get('/api/admin/siparisler', async (req, res) => {
+app.get('/api/admin/siparisler', verifyToken, isAdmin, async (req, res) => {
     try {
         const pool = await poolPromise;
         // 🚨 JOIN kullanmadan, verileri doğrudan alt sorguyla çekiyoruz. Müşteri silinse bile patlamaz!
@@ -668,7 +668,7 @@ app.get('/api/admin/siparisler', async (req, res) => {
 // ==========================================
 // 15. ADMIN: FİNANS VE ÖZET BİLGİLER
 // ==========================================
-app.get('/api/admin/ozet', async (req, res) => {
+app.get('/api/admin/ozet', verifyToken, isAdmin, async (req, res) => {
     try {
         const pool = await poolPromise;
         const gelirResult = await pool.request().query("SELECT ISNULL(SUM(ToplamTutar), 0) as ToplamGelir FROM Siparisler WHERE SiparisDurumu != 'İptal'");
@@ -688,7 +688,7 @@ app.get('/api/admin/ozet', async (req, res) => {
 // ==========================================
 // 16. ADMIN: STOK DURUMU
 // ==========================================
-app.get('/api/admin/stok', async (req, res) => {
+app.get('/api/admin/stok', verifyToken, isAdmin, async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request().query(`SELECT ParfumID, Marka, Ad FROM Parfumler ORDER BY Marka ASC`);
@@ -701,7 +701,7 @@ app.get('/api/admin/stok', async (req, res) => {
 // ==========================================
 // 17. ADMIN: SİPARİŞ DURUMU GÜNCELLEME
 // ==========================================
-app.post('/api/admin/siparis-guncelle', async (req, res) => {
+app.post('/api/admin/siparis-guncelle', verifyToken, isAdmin, async (req, res) => {
     const { siparisID, yeniDurum } = req.body;
     try {
         const pool = await poolPromise;
